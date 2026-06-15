@@ -1,26 +1,26 @@
-# skyblock_agent
+# skyblock-agent
 
-Hypixel SkyBlock 信息收集与助手（可迁移）。
+Portable Hypixel SkyBlock info collector and assistant.
 
-## 快速开始
+## Quick start
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate   # Windows
 pip install -e .
 
 copy .env.example .env
-# 编辑 .env，填入 HYPIXEL_API_KEY（游戏内 /api new）
+# Edit .env and set HYPIXEL_API_KEY (use /api new in-game)
 
-skyblock-agent profile <玩家名>
-skyblock-agent profile <玩家名> --profile Apple
+skyblock-agent profile <username>
+skyblock-agent profile <username> --profile Apple
+skyblock-agent profile <username> --json
 ```
 
-## API Key
+## API key
 
-在 Hypixel 服务器执行 `/api new` 获取 Key，写入 `.env` 的 `HYPIXEL_API_KEY`。
+Run `/api new` on Hypixel and put the key in `.env` as `HYPIXEL_API_KEY`.
 
 ## License
 
-[LGPL-3.0-or-later](LICENSE) — 与 [Skyblocker](https://github.com/SkyblockerMod/Skyblocker)、[NotEnoughUpdates](https://github.com/NotEnoughUpdates/NotEnoughUpdates) 等 SkyBlock 社区项目一致。
-
+[LGPL-3.0-or-later](LICENSE) — aligned with SkyBlock community projects such as [Skyblocker](https://github.com/SkyblockerMod/Skyblocker) and [NotEnoughUpdates](https://github.com/NotEnoughUpdates/NotEnoughUpdates).
