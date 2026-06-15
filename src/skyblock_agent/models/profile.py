@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from skyblock_agent.models.members import get_member, normalize_member_map
+from skyblock_agent.utils.uuid_utils import normalize_uuid
+
 
 SKILL_KEYS = (
     "combat",
@@ -102,6 +105,20 @@ def parse_skills(member: dict[str, Any]) -> list[SkillInfo]:
     return skills
 
 
+def _slayer_level(boss: dict[str, Any]) -> int:
+    claimed_levels = boss.get("claimed_levels")
+    if isinstance(claimed_levels, dict):
+        return sum(1 for value in claimed_levels.values() if value)
+
+    residents = boss.get("claimed_residents")
+    if isinstance(residents, dict):
+        try:
+            return int(residents.get("level", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+    return 0
+
+
 def parse_slayers(member: dict[str, Any]) -> list[SlayerInfo]:
     slayer_root = _nested_get(member, "slayer", "slayer_bosses") or {}
     if not isinstance(slayer_root, dict):
@@ -112,10 +129,7 @@ def parse_slayers(member: dict[str, Any]) -> list[SlayerInfo]:
         boss = slayer_root.get(name)
         if not isinstance(boss, dict):
             continue
-        try:
-            level = int(boss.get("claimed_residents", {}).get("level", 0) or 0)
-        except (TypeError, ValueError):
-            level = 0
+        level = _slayer_level(boss)
         try:
             xp = float(boss.get("xp", 0) or 0)
         except (TypeError, ValueError):
@@ -154,10 +168,10 @@ def list_player_profiles(
     for profile in profiles:
         if not isinstance(profile, dict):
             continue
-        members = profile.get("members")
-        if not isinstance(members, dict):
+        members = normalize_member_map(profile.get("members"))
+        if not members:
             continue
-        member = members.get(player_uuid)
+        member = members.get(normalize_uuid(player_uuid))
         if not isinstance(member, dict):
             continue
         if not is_confirmed_member(member):
@@ -191,8 +205,8 @@ def select_profile(
 
 
 def summarize_profile(profile: dict[str, Any], player_uuid: str) -> ProfileSummary:
-    members = profile.get("members") or {}
-    member = members.get(player_uuid, {}) if isinstance(members, dict) else {}
+    members = normalize_member_map(profile.get("members"))
+    member = get_member(members, player_uuid)
 
     return ProfileSummary(
         cute_name=str(profile.get("cute_name", "Unknown")),
@@ -204,5 +218,5 @@ def summarize_profile(profile: dict[str, Any], player_uuid: str) -> ProfileSumma
         skills=parse_skills(member),
         slayers=parse_slayers(member),
         catacombs_level=catacombs_level(member),
-        member_count=len(members) if isinstance(members, dict) else 0,
+        member_count=len(members),
     )

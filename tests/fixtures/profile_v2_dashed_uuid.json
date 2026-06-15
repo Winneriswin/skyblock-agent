@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "profiles": [
+    {
+      "cute_name": "Banana",
+      "profile_id": "11111111-1111-1111-1111-111111111111",
+      "selected": true,
+      "members": {
+        "28667672-0390-4498-9b00-19b14a2c34d6": {
+          "leveling": { "experience": 4200 },
+          "player_data": {
+            "experience": { "SKILL_COMBAT": 1000 }
+          }
+        }
+      }
+    }
+  ]
+}

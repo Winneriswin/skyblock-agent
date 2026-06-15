@@ -20,6 +20,15 @@ MOJANG_PROFILE_LOOKUP = (
     "https://api.minecraftservices.com/minecraft/profile/lookup/name"
 )
 
+_PLACEHOLDER_KEYS = frozenset(
+    {
+        "",
+        "your-api-key-here",
+        "your-hypixel-api-key",
+        "changeme",
+    }
+)
+
 
 def get_api_key() -> str:
     key = os.getenv("HYPIXEL_API_KEY", "").strip()
@@ -28,4 +37,14 @@ def get_api_key() -> str:
             "HYPIXEL_API_KEY is not set. Copy .env.example to .env and add your key "
             "(get one in-game with /api new)."
         )
+    if key.lower() in _PLACEHOLDER_KEYS:
+        raise RuntimeError(
+            "HYPIXEL_API_KEY is still the placeholder value. Edit .env and paste the key "
+            "from /api new on Hypixel."
+        )
     return key
+
+
+def is_api_key_configured() -> bool:
+    key = os.getenv("HYPIXEL_API_KEY", "").strip()
+    return bool(key) and key.lower() not in _PLACEHOLDER_KEYS

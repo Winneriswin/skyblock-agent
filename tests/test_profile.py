@@ -87,3 +87,28 @@ def test_summarize_profile():
     assert summary.skills_api_enabled is True
     assert summary.member_count == 2
     assert any(s.name == "combat" and s.experience == 1000 for s in summary.skills)
+
+
+def test_v2_slayer_claimed_levels():
+    uuid = "28667672039044989b0019b14a2c34d6"
+    profile = {
+        "cute_name": "Kiwi",
+        "profile_id": "pid-1",
+        "selected": True,
+        "members": {
+            uuid: {
+                "slayer": {
+                    "slayer_bosses": {
+                        "zombie": {
+                            "xp": 10000,
+                            "claimed_levels": {"1": True, "2": True, "3": True},
+                        },
+                    }
+                },
+            }
+        },
+    }
+    summary = summarize_profile(profile, uuid)
+    zombie = next(s for s in summary.slayers if s.name == "zombie")
+    assert zombie.level == 3
+    assert zombie.xp == 10000

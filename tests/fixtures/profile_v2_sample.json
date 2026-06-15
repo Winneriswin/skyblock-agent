@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "profiles": [
+    {
+      "cute_name": "Apple",
+      "profile_id": "f5791b0c-caf1-4701-aea3-d727ea53a901",
+      "selected": true,
+      "game_mode": "normal",
+      "members": {
+        "28667672039044989b0019b14a2c34d6": {
+          "leveling": { "experience": 4200 },
+          "player_data": {
+            "experience": {
+              "SKILL_COMBAT": 150000,
+              "SKILL_MINING": 80000,
+              "SKILL_FARMING": 50000
+            }
+          },
+          "slayer": {
+            "slayer_bosses": {
+              "zombie": {
+                "xp": 120000,
+                "claimed_levels": { "1": true, "2": true, "3": true }
+              },
+              "spider": { "xp": 0 }
+            }
+          },
+          "dungeons": {
+            "dungeon_types": {
+              "catacombs": { "experience": 250000 }
+            }
+          },
+          "collection": { "WHEAT": 1000 },
+          "inventory": { "inv_contents": {} },
+          "pets_data": { "pets": [] }
+        }
+      }
+    }
+  ]
+}

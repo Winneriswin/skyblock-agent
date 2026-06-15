@@ -58,6 +58,12 @@ class HypixelClient:
                     continue
                 raise HypixelApiError("Rate limited by Hypixel API", status_code=429)
 
+            if response.status_code == 403:
+                raise HypixelApiError(
+                    "Invalid Hypixel API key. Run /api new in-game and update HYPIXEL_API_KEY in .env.",
+                    status_code=403,
+                )
+
             if response.status_code != 200:
                 raise HypixelApiError(
                     f"Hypixel API error {response.status_code}: {response.text[:200]}",

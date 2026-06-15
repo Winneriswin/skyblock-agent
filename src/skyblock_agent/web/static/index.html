@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skyblock Agent</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div class="brand-title">Skyblock Agent</div>
+          <div class="brand-sub">Profile viewer</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" type="button">Profile</button>
+        <button class="nav-item disabled" type="button" disabled>Resources</button>
+        <button class="nav-item disabled" type="button" disabled>Wiki</button>
+      </nav>
+      <div class="sidebar-section">
+        <div class="section-title">Recent imports</div>
+        <div id="recent-players" class="recent-players"></div>
+      </div>
+      <div class="sidebar-footer">
+        <div id="health-pill" class="pill pill-muted">Checking API key…</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <form id="search-form" class="search-bar">
+          <input id="username" type="text" placeholder="Minecraft username" autocomplete="off" />
+          <input id="profile-name" type="text" placeholder="Profile (optional)" autocomplete="off" />
+          <button type="submit" id="search-btn">Lookup</button>
+        </form>
+      </header>
+
+      <section id="status" class="status hidden"></section>
+
+      <section id="content" class="content hidden">
+        <div class="hero card">
+          <div>
+            <div class="eyebrow">Player</div>
+            <h1 id="player-name">—</h1>
+            <div id="player-meta" class="muted"></div>
+          </div>
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-label">SkyBlock Level</div>
+              <div id="sb-level" class="stat-value">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Recognition</div>
+              <div id="recognition-rate" class="stat-value">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Profiles</div>
+              <div id="profile-count" class="stat-value">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="card">
+            <div class="card-header">
+              <h2>Skills</h2>
+              <span id="skills-badge" class="pill pill-muted">—</span>
+            </div>
+            <div id="skills-grid" class="skills-grid"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Slayers</h2>
+            </div>
+            <div id="slayers-list" class="list"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Imported API Data</h2>
+            <span id="import-time" class="pill pill-ok">—</span>
+          </div>
+          <div id="import-files" class="list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>API Field Recognition</h2>
+            <span id="recognition-summary" class="muted"></span>
+          </div>
+          <div id="recognition-table" class="recognition-table"></div>
+        </div>
+      </section>
+
+      <section id="empty" class="empty-state">
+        <div class="empty-icon"></div>
+        <h2>Look up a SkyBlock profile</h2>
+        <p class="muted">Enter a username to fetch Hypixel API data and verify field recognition.</p>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

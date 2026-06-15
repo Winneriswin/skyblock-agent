@@ -16,6 +16,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
+gui = ["fastapi>=0.115.0", "uvicorn[standard]>=0.32.0"]
+
+[tool.setuptools.package-data]
+"skyblock_agent.web" = ["static/*"]
 
 [project.scripts]
 skyblock-agent = "skyblock_agent.cli:main"

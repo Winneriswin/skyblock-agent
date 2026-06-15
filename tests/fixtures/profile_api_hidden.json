@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "profiles": [
+    {
+      "cute_name": "Coconut",
+      "profile_id": "22222222-2222-2222-2222-222222222222",
+      "selected": true,
+      "members": {
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+          "leveling": { "experience": 1000 },
+          "player_data": {
+            "experience": {
+              "SKILL_COMBAT": -1,
+              "SKILL_MINING": -1
+            }
+          }
+        }
+      }
+    }
+  ]
+}
