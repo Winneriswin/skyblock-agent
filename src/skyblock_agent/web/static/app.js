@@ -1,24 +1,3 @@
-const statusEl = document.getElementById("status");
-const contentEl = document.getElementById("content");
-const emptyEl = document.getElementById("empty");
-const marketEmptyEl = document.getElementById("market-empty");
-const marketContentEl = document.getElementById("market-content");
-const form = document.getElementById("search-form");
-const marketForm = document.getElementById("market-form");
-const searchBtn = document.getElementById("search-btn");
-const marketBtn = document.getElementById("market-btn");
-const usernameInput = document.getElementById("username");
-const profileInput = document.getElementById("profile-name");
-const recentPlayersEl = document.getElementById("recent-players");
-const profileTopbar = document.getElementById("profile-topbar");
-const marketTopbar = document.getElementById("market-topbar");
-const marketTypeEl = document.getElementById("market-type");
-const marketQueryEl = document.getElementById("market-query");
-const binOnlyEl = document.getElementById("bin-only");
-const binOnlyWrap = document.getElementById("bin-only-wrap");
-const auctionPageEl = document.getElementById("auction-page");
-const navItems = document.querySelectorAll(".nav-item[data-view]");
-
 let activeView = "profile";
 
 const pillClass = {
@@ -28,135 +7,24 @@ const pillClass = {
   hidden: "pill-hidden",
 };
 
+function $(id) {
+  return document.getElementById(id);
+}
+
+function getNavItems() {
+  return document.querySelectorAll(".nav-item[data-view]");
+}
+
 function showStatus(message, isError = false) {
+  const statusEl = $("status");
+  if (!statusEl) return;
   statusEl.textContent = message;
   statusEl.classList.remove("hidden", "error");
   statusEl.classList.toggle("error", isError);
 }
 
 function hideStatus() {
-  statusEl.classList.add("hidden");
-}
-
-function formatCoins(value) {
-  if (value === null || value === undefined) return "—";
-  return Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-
-function formatTimestamp(ms) {
-  if (!ms) return "—";
-  return new Date(Number(ms)).toLocaleString();
-}
-
-function switchView(view) {
-  activeView = view;
-  navItems.forEach((item) => {
-    item.classList.toggle("active", item.dataset.view === view);
-  });
-
-  const isProfile = view === "profile";
-  profileTopbar.classList.toggle("hidden", !isProfile);
-  marketTopbar.classList.toggle("hidden", isProfile);
-
-  if (isProfile) {
-    marketContentEl.classList.add("hidden");
-    marketEmptyEl.classList.add("hidden");
-    if (contentEl.classList.contains("hidden")) {
-      emptyEl.classList.remove("hidden");
-    }
-  } else {
-    contentEl.classList.add("hidden");
-    emptyEl.classList.add("hidden");
-    hideStatus();
-    if (marketContentEl.classList.contains("hidden")) {
-      marketEmptyEl.classList.remove("hidden");
-    }
-  }
-
-  const isAuctions = marketTypeEl.value === "auctions";
-  binOnlyWrap.classList.toggle("hidden", !isAuctions);
-  auctionPageEl.classList.toggle("hidden", !isAuctions);
-}
-
-function renderBazaarTable(products) {
-  const table = document.getElementById("market-table");
-  if (!products.length) {
-    table.innerHTML = `<div class="muted">No products matched.</div>`;
-    return;
-  }
-
-  const rows = products.map((product) => `
-    <div class="market-row">
-      <span class="market-primary">${product.product_id}</span>
-      <span>${formatCoins(product.buy_price)}</span>
-      <span>${formatCoins(product.sell_price)}</span>
-      <span>${formatCoins(product.spread)}</span>
-      <span class="muted">${formatNumber(product.buy_volume)} / ${formatNumber(product.sell_volume)}</span>
-    </div>
-  `).join("");
-
-  table.innerHTML = `
-    <div class="market-row market-head">
-      <span>Product</span><span>Buy</span><span>Sell</span><span>Spread</span><span>Vol buy/sell</span>
-    </div>
-    ${rows}
-  `;
-}
-
-function renderAuctionsTable(auctions) {
-  const table = document.getElementById("market-table");
-  if (!auctions.length) {
-    table.innerHTML = `<div class="muted">No auctions matched on this page.</div>`;
-    return;
-  }
-
-  const rows = auctions.map((auction) => `
-    <div class="market-row">
-      <span class="market-primary">${auction.item_name}</span>
-      <span>${auction.bin ? "BIN" : "Bid"}</span>
-      <span>${formatNumber(auction.price)}</span>
-      <span>${auction.tier || "—"}</span>
-      <span class="muted">${auction.category || "—"}</span>
-    </div>
-  `).join("");
-
-  table.innerHTML = `
-    <div class="market-row market-head">
-      <span>Item</span><span>Type</span><span>Price</span><span>Tier</span><span>Category</span>
-    </div>
-    ${rows}
-  `;
-}
-
-function renderMarket(data, type) {
-  document.getElementById("market-source").textContent = type === "bazaar" ? "Bazaar" : "Auction House";
-  document.getElementById("market-title").textContent =
-    type === "bazaar" ? "Live Bazaar prices" : `Auctions page ${(data.page ?? 0) + 1}`;
-
-  if (type === "bazaar") {
-    document.getElementById("market-meta").textContent =
-      data.query ? `Filter: ${data.query}` : "All Bazaar products";
-    document.getElementById("market-matched").textContent = formatNumber(data.matched_products);
-    document.getElementById("market-total").textContent = formatNumber(data.total_products);
-    document.getElementById("market-updated").textContent = formatTimestamp(data.last_updated);
-    document.getElementById("market-table-title").textContent = "Bazaar products";
-    renderBazaarTable(data.products || []);
-  } else {
-    document.getElementById("market-meta").textContent =
-      `${formatNumber(data.total_auctions)} active auctions · page ${(data.page ?? 0) + 1} of ${data.total_pages ?? 1}`;
-    document.getElementById("market-matched").textContent = formatNumber(data.matched_auctions);
-    document.getElementById("market-total").textContent = formatNumber(data.total_auctions);
-    document.getElementById("market-updated").textContent = formatTimestamp(data.last_updated);
-    document.getElementById("market-table-title").textContent = "Auction listings";
-    renderAuctionsTable(data.auctions || []);
-  }
-
-  const saved = document.getElementById("market-saved");
-  saved.textContent = data.raw_path ? "Saved locally" : "Not saved";
-  saved.className = `pill ${data.raw_path ? "pill-ok" : "pill-muted"}`;
-
-  marketEmptyEl.classList.add("hidden");
-  marketContentEl.classList.remove("hidden");
+  $("status")?.classList.add("hidden");
 }
 
 function formatNumber(value) {
@@ -164,9 +32,44 @@ function formatNumber(value) {
   return Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
+function switchView(view) {
+  activeView = view;
+  getNavItems().forEach((item) => {
+    item.classList.toggle("active", item.dataset.view === view);
+  });
+
+  const isProfile = view === "profile";
+  $("profile-topbar")?.classList.toggle("hidden", !isProfile);
+  $("market-topbar")?.classList.toggle("hidden", isProfile);
+
+  const contentEl = $("content");
+  const emptyEl = $("empty");
+  const marketEmptyEl = $("market-empty");
+  const marketContentEl = $("market-content");
+
+  if (isProfile) {
+    marketContentEl?.classList.add("hidden");
+    marketEmptyEl?.classList.add("hidden");
+    if (contentEl?.classList.contains("hidden")) {
+      emptyEl?.classList.remove("hidden");
+    }
+  } else {
+    contentEl?.classList.add("hidden");
+    emptyEl?.classList.add("hidden");
+    hideStatus();
+    if (typeof MarketBrowser === "undefined") {
+      showStatus("Market UI is still loading. Please wait or refresh.", true);
+      return;
+    }
+    MarketBrowser.open();
+  }
+}
+
 function renderSkills(summary) {
-  const grid = document.getElementById("skills-grid");
-  const badge = document.getElementById("skills-badge");
+  const grid = $("skills-grid");
+  const badge = $("skills-badge");
+  if (!grid || !badge) return;
+
   badge.textContent = summary.skills_api_enabled ? "API enabled" : "API disabled";
   badge.className = `pill ${summary.skills_api_enabled ? "pill-ok" : "pill-hidden"}`;
 
@@ -181,7 +84,9 @@ function renderSkills(summary) {
 }
 
 function renderSlayers(summary) {
-  const list = document.getElementById("slayers-list");
+  const list = $("slayers-list");
+  if (!list) return;
+
   list.innerHTML = "";
   const active = summary.slayers.filter((s) => s.xp > 0 || s.level > 0);
   if (!active.length) {
@@ -197,8 +102,10 @@ function renderSlayers(summary) {
 }
 
 function renderImport(importInfo) {
-  const timeEl = document.getElementById("import-time");
-  const filesEl = document.getElementById("import-files");
+  const timeEl = $("import-time");
+  const filesEl = $("import-files");
+  if (!timeEl || !filesEl) return;
+
   timeEl.textContent = importInfo.last_imported_at || "Imported";
   filesEl.innerHTML = "";
 
@@ -217,11 +124,13 @@ function renderImport(importInfo) {
 }
 
 function renderRecognition(report) {
-  document.getElementById("recognition-rate").textContent = `${Math.round(report.pass_rate * 100)}%`;
-  document.getElementById("recognition-summary").textContent =
+  $("recognition-rate").textContent = `${Math.round(report.pass_rate * 100)}%`;
+  $("recognition-summary").textContent =
     `${report.ok_count}/${report.total_count} fields recognized`;
 
-  const table = document.getElementById("recognition-table");
+  const table = $("recognition-table");
+  if (!table) return;
+
   table.innerHTML = "";
   for (const check of report.checks) {
     const row = document.createElement("div");
@@ -243,27 +152,34 @@ function renderProfile(payload) {
   const summary = profile.summary;
   const report = payload.recognition;
 
-  document.getElementById("player-name").textContent = profile.username;
-  document.getElementById("player-meta").textContent =
+  $("player-name").textContent = profile.username;
+  $("player-meta").textContent =
     `${summary.cute_name} · ${profile.uuid} · ${summary.game_mode || "normal"}`;
-  document.getElementById("sb-level").textContent = formatNumber(summary.skyblock_level);
-  document.getElementById("profile-count").textContent = profile.available_profiles.length;
+  $("sb-level").textContent = formatNumber(summary.skyblock_level);
+  $("profile-count").textContent = profile.available_profiles.length;
 
   renderSkills(summary);
   renderSlayers(summary);
   if (payload.import) renderImport(payload.import);
   renderRecognition(report);
 
-  emptyEl.classList.add("hidden");
-  contentEl.classList.remove("hidden");
+  $("empty")?.classList.add("hidden");
+  $("content")?.classList.remove("hidden");
 }
 
 function renderRecentPlayers(players) {
+  const recentPlayersEl = $("recent-players");
+  if (!recentPlayersEl) return;
+
   recentPlayersEl.innerHTML = "";
   if (!players.length) {
     recentPlayersEl.innerHTML = `<div class="muted" style="padding:8px 10px">No imports yet</div>`;
     return;
   }
+
+  const form = $("search-form");
+  const usernameInput = $("username");
+  const profileInput = $("profile-name");
 
   for (const player of players.slice(0, 12)) {
     const btn = document.createElement("button");
@@ -271,15 +187,18 @@ function renderRecentPlayers(players) {
     btn.className = "recent-player";
     btn.innerHTML = `${player.username}<small>${player.selected_profile || "—"}</small>`;
     btn.addEventListener("click", () => {
-      usernameInput.value = player.username;
-      profileInput.value = player.selected_profile || "";
-      form.requestSubmit();
+      if (usernameInput) usernameInput.value = player.username;
+      if (profileInput) profileInput.value = player.selected_profile || "";
+      form?.requestSubmit();
     });
     recentPlayersEl.appendChild(btn);
   }
 }
 
 async function loadRecentPlayers() {
+  const recentPlayersEl = $("recent-players");
+  if (!recentPlayersEl) return;
+
   try {
     const res = await fetch("/api/players");
     const data = await res.json();
@@ -290,17 +209,29 @@ async function loadRecentPlayers() {
 }
 
 async function loadHealth() {
-  const pill = document.getElementById("health-pill");
+  const pill = $("health-pill");
+  if (!pill) return;
+
   try {
     const res = await fetch("/api/health");
     const data = await res.json();
+    const parts = [];
     if (data.api_key_configured) {
-      pill.textContent = "API key configured";
-      pill.className = "pill pill-ok";
+      parts.push("API key OK");
     } else {
-      pill.textContent = data.message || "API key missing (.env)";
-      pill.className = "pill pill-missing";
+      parts.push(data.message || "API key missing");
+    }
+    if (data.items_catalog?.available) {
+      parts.push(`${data.items_catalog.item_count} items cached`);
+    } else {
+      parts.push("items: run sync-items");
+    }
+    pill.textContent = parts.join(" · ");
+    pill.className = `pill ${data.api_key_configured && data.items_catalog?.available ? "pill-ok" : "pill-muted"}`;
+    if (!data.api_key_configured) {
       showStatus(data.message || "Configure HYPIXEL_API_KEY in .env before lookup.", true);
+    } else if (!data.items_catalog?.available && data.items_catalog?.hint) {
+      showStatus(data.items_catalog.hint, false);
     }
   } catch {
     pill.textContent = "Server unavailable";
@@ -308,82 +239,76 @@ async function loadHealth() {
   }
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  hideStatus();
-  searchBtn.disabled = true;
-
-  const username = usernameInput.value.trim();
-  const profileName = profileInput.value.trim();
-  if (!username) {
-    showStatus("Please enter a username.", true);
-    searchBtn.disabled = false;
-    return;
+function ensureFreshUi() {
+  if (document.querySelector('.nav-item[data-view="market"]')) {
+    sessionStorage.removeItem("skyblock-agent-ui-reload");
+    return true;
   }
 
-  const params = new URLSearchParams();
-  if (profileName) params.set("profile", profileName);
+  const reloadKey = "skyblock-agent-ui-reload";
+  if (!sessionStorage.getItem(reloadKey)) {
+    sessionStorage.setItem(reloadKey, "1");
+    location.replace(`${location.pathname}?v=${Date.now()}`);
+    return false;
+  }
 
-  try {
-    showStatus(`Looking up ${username} and importing API data…`);
-    const res = await fetch(`/api/lookup/${encodeURIComponent(username)}?${params}`);
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.detail || "Request failed");
-    }
+  return true;
+}
+
+function initApp() {
+  if (!ensureFreshUi()) return;
+
+  const form = $("search-form");
+  const searchBtn = $("search-btn");
+  const usernameInput = $("username");
+  const profileInput = $("profile-name");
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
     hideStatus();
-    renderProfile(data);
-    loadRecentPlayers();
-  } catch (error) {
-    showStatus(error.message || "Failed to lookup player.", true);
-  } finally {
-    searchBtn.disabled = false;
-  }
-});
+    if (searchBtn) searchBtn.disabled = true;
 
-marketTypeEl.addEventListener("change", () => {
-  const isAuctions = marketTypeEl.value === "auctions";
-  binOnlyWrap.classList.toggle("hidden", !isAuctions);
-  auctionPageEl.classList.toggle("hidden", !isAuctions);
-});
-
-navItems.forEach((item) => {
-  item.addEventListener("click", () => switchView(item.dataset.view));
-});
-
-marketForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  hideStatus();
-  marketBtn.disabled = true;
-
-  const type = marketTypeEl.value;
-  const query = marketQueryEl.value.trim();
-  const params = new URLSearchParams();
-  if (query) params.set("q", query);
-  params.set("limit", "50");
-
-  const endpoint = type === "bazaar" ? "/api/bazaar" : "/api/auctions";
-  if (type === "auctions") {
-    params.set("page", String(Math.max(0, Number(auctionPageEl.value) || 0)));
-    if (binOnlyEl.checked) params.set("bin_only", "true");
-  }
-
-  try {
-    showStatus(`Fetching ${type === "bazaar" ? "Bazaar" : "Auction House"} data…`);
-    const res = await fetch(`${endpoint}?${params}`);
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.detail || "Request failed");
+    const username = usernameInput?.value.trim() || "";
+    const profileName = profileInput?.value.trim() || "";
+    if (!username) {
+      showStatus("Please enter a username.", true);
+      if (searchBtn) searchBtn.disabled = false;
+      return;
     }
-    hideStatus();
-    renderMarket(data, type);
-  } catch (error) {
-    showStatus(error.message || "Failed to fetch market data.", true);
-  } finally {
-    marketBtn.disabled = false;
-  }
-});
 
-loadHealth();
-loadRecentPlayers();
-switchView("profile");
+    const params = new URLSearchParams();
+    if (profileName) params.set("profile", profileName);
+
+    try {
+      showStatus(`Looking up ${username} and importing API data…`);
+      const res = await fetch(`/api/lookup/${encodeURIComponent(username)}?${params}`);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Request failed");
+      }
+      hideStatus();
+      renderProfile(data);
+      loadRecentPlayers();
+    } catch (error) {
+      showStatus(error.message || "Failed to lookup player.", true);
+    } finally {
+      if (searchBtn) searchBtn.disabled = false;
+    }
+  });
+
+  document.querySelector(".nav")?.addEventListener("click", (event) => {
+    const item = event.target.closest(".nav-item[data-view]");
+    if (!item) return;
+    switchView(item.dataset.view);
+  });
+
+  loadHealth();
+  loadRecentPlayers();
+  switchView("profile");
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  initApp();
+}

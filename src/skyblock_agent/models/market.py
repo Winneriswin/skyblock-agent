@@ -149,10 +149,17 @@ def filter_auctions(
     query: str,
     *,
     bin_only: bool = False,
+    category: str = "",
 ) -> list[AuctionListing]:
     filtered = auctions
     if bin_only:
         filtered = [auction for auction in filtered if auction.bin]
+
+    category_key = category.strip().lower()
+    if category_key:
+        filtered = [
+            auction for auction in filtered if auction.category.lower() == category_key
+        ]
 
     needle = query.strip().lower()
     if not needle:
@@ -165,3 +172,31 @@ def filter_auctions(
         or needle in auction.tier.lower()
         or needle in auction.category.lower()
     ]
+
+
+def sort_bazaar_products(
+    products: list[BazaarProduct],
+    sort: str,
+) -> list[BazaarProduct]:
+    key = sort.strip().lower()
+    if key == "sell":
+        return sorted(products, key=lambda item: item.sell_price, reverse=True)
+    if key == "buy":
+        return sorted(products, key=lambda item: item.buy_price, reverse=True)
+    if key == "spread":
+        return sorted(products, key=lambda item: item.spread, reverse=True)
+    return sorted(products, key=lambda item: item.product_id)
+
+
+def sort_auctions(auctions: list[AuctionListing], sort: str) -> list[AuctionListing]:
+    key = sort.strip().lower()
+    if key == "price":
+        return sorted(auctions, key=lambda item: item.price, reverse=True)
+    if key == "name":
+        return sorted(auctions, key=lambda item: item.item_name.lower())
+    if key == "tier":
+        return sorted(auctions, key=lambda item: item.tier)
+    return auctions
+
+
+AH_CATEGORIES = ("armor", "weapon", "accessories", "misc", "consumables", "cosmetic", "dyes")

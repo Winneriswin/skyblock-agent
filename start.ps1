@@ -21,5 +21,5 @@ if (-not (Test-Path ".env")) {
 $HostAddress = "127.0.0.1"
 $Port = 8765
 Write-Host "[skyblock-agent] Starting GUI at http://${HostAddress}:${Port}"
-Start-Process "http://${HostAddress}:${Port}"
-skyblock-agent gui --host $HostAddress --port $Port
+Write-Host "Browser opens after the server is ready. Use Ctrl+C to stop."
+& ".venv\Scripts\skyblock-agent.exe" gui --host $HostAddress --port $Port

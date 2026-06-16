@@ -7,6 +7,7 @@ import json
 import sys
 
 from skyblock_agent.collectors.hypixel_client import HypixelApiError
+from skyblock_agent.collectors.items_importer import ItemsImporter
 from skyblock_agent.collectors.market_collector import MarketCollector
 from skyblock_agent.collectors.player_lookup import PlayerLookupService
 from skyblock_agent.serializers import (
@@ -15,6 +16,7 @@ from skyblock_agent.serializers import (
     build_lookup_payload,
     profile_result_to_dict,
 )
+from skyblock_agent.storage.item_index import catalog_is_available, get_catalog_meta, search_items
 from skyblock_agent.storage.player_index import list_players
 from skyblock_agent.validation.api_recognizer import recognize_player_result
 
@@ -159,13 +161,38 @@ def cmd_list_players(args: argparse.Namespace) -> int:
 
 
 def cmd_gui(args: argparse.Namespace) -> int:
+    import threading
+    import time
+    import urllib.error
+    import urllib.request
+    import webbrowser
+
     try:
         from skyblock_agent.web.app import run
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 2
 
-    print(f"Skyblock Agent GUI: http://{args.host}:{args.port}")
+    base = f"http://{args.host}:{args.port}"
+    health_url = f"{base}/api/health"
+
+    def _open_browser_when_ready() -> None:
+        for _ in range(60):
+            try:
+                urllib.request.urlopen(health_url, timeout=1)
+                time.sleep(0.4)
+                with urllib.request.urlopen(f"{base}/", timeout=2) as response:
+                    html = response.read().decode("utf-8", errors="replace")
+                if 'data-view="market"' not in html:
+                    time.sleep(0.25)
+                    continue
+                webbrowser.open(f"{base}/?v={int(time.time())}")
+                return
+            except (urllib.error.URLError, OSError):
+                time.sleep(0.25)
+
+    threading.Thread(target=_open_browser_when_ready, daemon=True).start()
+    print(f"Skyblock Agent GUI: {base}")
     run(host=args.host, port=args.port)
     return 0
 
@@ -279,6 +306,77 @@ def cmd_auctions(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_items_import(args: argparse.Namespace) -> int:
+    try:
+        with ItemsImporter() as importer:
+            result = importer.import_items(save_raw=not args.no_save)
+    except HypixelApiError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    meta = result.meta
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "meta": meta.to_dict(),
+                    "catalog_path": str(result.catalog_path),
+                    "meta_path": str(result.meta_path),
+                },
+                indent=2,
+            )
+        )
+    else:
+        print(f"Imported {meta.item_count} items in {meta.category_count} categories")
+        print(f"Hypixel lastUpdated: {meta.last_updated}")
+        print(f"Catalog: {result.catalog_path}")
+        print(f"Meta: {result.meta_path}")
+        if meta.raw_path:
+            print(f"Raw: {meta.raw_path}")
+    return 0
+
+
+def cmd_items_status(args: argparse.Namespace) -> int:
+    if not catalog_is_available():
+        print("Item catalog: not imported")
+        print("Run: skyblock-agent items import  (or sync-items.bat)")
+        return 1
+
+    meta = get_catalog_meta()
+    if meta is None:
+        print("Item catalog: meta file unreadable")
+        return 1
+
+    if args.json:
+        print(json.dumps({"available": True, "meta": meta.to_dict()}, indent=2))
+    else:
+        print(f"Item catalog: {meta.item_count} items, {meta.category_count} categories")
+        print(f"Imported at: {meta.last_imported_at}")
+        print(f"Hypixel lastUpdated: {meta.last_updated}")
+    return 0
+
+
+def cmd_items_search(args: argparse.Namespace) -> int:
+    if not catalog_is_available():
+        print("Item catalog not imported. Run: skyblock-agent items import", file=sys.stderr)
+        return 2
+
+    matches = search_items(args.query or "", category=args.category, limit=args.limit)
+    if args.json:
+        print(json.dumps({"items": matches, "count": len(matches)}, indent=2, ensure_ascii=False))
+        return 0
+
+    if not matches:
+        print("No items matched.")
+        return 0
+
+    for item in matches:
+        category = item.get("category") or "—"
+        tier = item.get("tier") or "—"
+        print(f"{item.get('name')} [{item.get('id')}] · {category} · {tier}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="skyblock-agent",
@@ -340,6 +438,28 @@ def build_parser() -> argparse.ArgumentParser:
     auctions.add_argument("--json", action="store_true")
     auctions.add_argument("--no-save", action="store_true", help="Skip writing raw JSON to data/")
     auctions.set_defaults(func=cmd_auctions)
+
+    items = sub.add_parser("items", help="SkyBlock item catalog (static resources, manual sync)")
+    items_sub = items.add_subparsers(dest="items_command", required=True)
+
+    items_import = items_sub.add_parser(
+        "import",
+        help="Download latest items from Hypixel resources (not run on GUI startup)",
+    )
+    items_import.add_argument("--json", action="store_true")
+    items_import.add_argument("--no-save", action="store_true", help="Skip writing raw JSON to data/")
+    items_import.set_defaults(func=cmd_items_import)
+
+    items_status = items_sub.add_parser("status", help="Show local item catalog status")
+    items_status.add_argument("--json", action="store_true")
+    items_status.set_defaults(func=cmd_items_status)
+
+    items_search = items_sub.add_parser("search", help="Search locally imported items")
+    items_search.add_argument("query", nargs="?", default="", help="Name or item id")
+    items_search.add_argument("--category", "-c", help="Filter by category (e.g. SWORD)")
+    items_search.add_argument("--limit", type=int, default=20)
+    items_search.add_argument("--json", action="store_true")
+    items_search.set_defaults(func=cmd_items_search)
 
     return parser
 

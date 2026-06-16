@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "lastUpdated": 1700000000000,
+  "items": [
+    {
+      "id": "ENCHANTED_DIAMOND",
+      "name": "Enchanted Diamond",
+      "category": "BLOCK",
+      "tier": "UNCOMMON",
+      "material": "DIAMOND",
+      "npc_sell_price": 320
+    },
+    {
+      "id": "ASPECT_OF_THE_DRAGONS",
+      "name": "Aspect of the Dragons",
+      "category": "SWORD",
+      "tier": "LEGENDARY",
+      "material": "DIAMOND_SWORD",
+      "npc_sell_price": 100000
+    }
+  ]
+}

@@ -13,7 +13,10 @@ from skyblock_agent.models.market import (
     filter_bazaar_products,
     parse_auctions,
     parse_bazaar_products,
+    sort_auctions,
+    sort_bazaar_products,
 )
+from skyblock_agent.storage.item_index import get_catalog_item
 from skyblock_agent.storage.raw_store import save_raw_json
 
 
@@ -73,11 +76,17 @@ class MarketCollector:
         self,
         query: str = "",
         *,
+        category: str = "",
+        sort: str = "name",
         save: bool = True,
     ) -> BazaarSnapshotResult:
         snapshot = self.fetch_bazaar(save=save)
+        products = snapshot.products
         if query.strip():
-            snapshot.products = filter_bazaar_products(snapshot.products, query)
+            products = self._filter_bazaar_with_catalog(products, query)
+        if category.strip():
+            products = self._filter_bazaar_category(products, category)
+        snapshot.products = sort_bazaar_products(products, sort)
         return snapshot
 
     def search_auctions_page(
@@ -86,12 +95,66 @@ class MarketCollector:
         query: str = "",
         *,
         bin_only: bool = False,
+        category: str = "",
+        sort: str = "price",
         save: bool = True,
     ) -> AuctionsPageResult:
         result = self.fetch_auctions_page(page, save=save)
-        if query.strip() or bin_only:
-            result.auctions = filter_auctions(result.auctions, query, bin_only=bin_only)
+        if query.strip() or bin_only or category.strip():
+            result.auctions = filter_auctions(
+                result.auctions,
+                query,
+                bin_only=bin_only,
+                category=category,
+            )
+        result.auctions = sort_auctions(result.auctions, sort)
         return result
+
+    @staticmethod
+    def _filter_bazaar_with_catalog(
+        products: list[BazaarProduct],
+        query: str,
+    ) -> list[BazaarProduct]:
+        needle = query.strip().lower().replace(" ", "_")
+        if not needle:
+            return products
+
+        matched: list[BazaarProduct] = []
+        for product in products:
+            haystack = product.product_id.lower()
+            if needle in haystack:
+                matched.append(product)
+                continue
+            item = get_catalog_item(product.product_id)
+            if item:
+                name = str(item.get("name") or "").lower()
+                if needle in name or needle.replace("_", " ") in name:
+                    matched.append(product)
+        return matched
+
+    @staticmethod
+    def _filter_bazaar_category(
+        products: list[BazaarProduct],
+        category: str,
+    ) -> list[BazaarProduct]:
+        category_key = category.strip().upper()
+        if category_key == "ENCHANTMENT":
+            return [p for p in products if p.product_id.startswith("ENCHANTMENT_")]
+        if category_key == "OTHER":
+            return [
+                p
+                for p in products
+                if get_catalog_item(p.product_id) is None
+                and not p.product_id.startswith("ENCHANTMENT_")
+            ]
+
+        matched: list[BazaarProduct] = []
+        for product in products:
+            item = get_catalog_item(product.product_id)
+            item_category = str(item.get("category") or "UNKNOWN") if item else None
+            if item_category == category_key:
+                matched.append(product)
+        return matched
 
     def close(self) -> None:
         self.hypixel.close()

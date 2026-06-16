@@ -1,0 +1,200 @@
+/**
+ * Minecraft-style item tooltips (from Hypixel/Minecraft Wiki minetip.js + inventory.less).
+ * @see https://hypixel-skyblock.fandom.com/wiki/Hypixel_SkyBlock_Wiki:Style_Manual/UIs
+ * @see https://minecraft.wiki/w/Module:Inventory_slot
+ */
+
+/* Inventory slot (32px, wiki invslot pattern) */
+.invslot {
+  display: inline-block;
+  vertical-align: middle;
+  width: 36px;
+  height: 36px;
+  margin: 2px;
+  background: #8b8b8b;
+  border: 2px solid #000;
+  box-shadow:
+    inset 2px 2px 0 #373737,
+    inset -2px -2px 0 #fff;
+  position: relative;
+}
+
+.invslot-item {
+  display: block;
+  width: 32px;
+  height: 32px;
+  margin: 2px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  position: relative;
+}
+
+.invslot-item img,
+.invslot-item .invslot-icon {
+  width: 32px;
+  height: 32px;
+  display: block;
+}
+
+.invslot-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 1px 1px 0 #3f3f3f;
+  background: linear-gradient(135deg, #5a5a5a, #3a3a3a);
+}
+
+.invslot-stacksize {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  font-family: "Minecraft", "Courier New", Consolas, monospace;
+  font-size: 14px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 1px 1px 0 #3f3f3f;
+  pointer-events: none;
+}
+
+.minetip {
+  cursor: default;
+}
+
+/* Minecraft formatting code colors (wiki Common.css) */
+.format-0 {
+  color: #000;
+  text-shadow: 0.125em 0.125em 0 #000;
+}
+.format-1 {
+  color: #00a;
+  text-shadow: 0.125em 0.125em 0 #00002a;
+}
+.format-2 {
+  color: #0a0;
+  text-shadow: 0.125em 0.125em 0 #002a00;
+}
+.format-3 {
+  color: #0aa;
+  text-shadow: 0.125em 0.125em 0 #002a2a;
+}
+.format-4 {
+  color: #a00;
+  text-shadow: 0.125em 0.125em 0 #2a0000;
+}
+.format-5 {
+  color: #a0a;
+  text-shadow: 0.125em 0.125em 0 #a200a2;
+}
+.format-6 {
+  color: #fa0;
+  text-shadow: 0.125em 0.125em 0 #2a2a00;
+}
+.format-7 {
+  color: #aaa;
+  text-shadow: 0.125em 0.125em 0 #2a2a2a;
+}
+.format-8 {
+  color: #555;
+  text-shadow: 0.125em 0.125em 0 #151515;
+}
+.format-9 {
+  color: #55f;
+  text-shadow: 0.125em 0.125em 0 #15153f;
+}
+.format-a {
+  color: #5f5;
+  text-shadow: 0.125em 0.125em 0 #153f15;
+}
+.format-b {
+  color: #5ff;
+  text-shadow: 0.125em 0.125em 0 #153f3f;
+}
+.format-c {
+  color: #f55;
+  text-shadow: 0.125em 0.125em 0 #3f1515;
+}
+.format-d {
+  color: #f5f;
+  text-shadow: 0.125em 0.125em 0 #3f153f;
+}
+.format-e {
+  color: #ff5;
+  text-shadow: 0.125em 0.125em 0 #3f3f15;
+}
+.format-f {
+  color: #fff;
+  text-shadow: 0.125em 0.125em 0 #3f3f3f;
+}
+.format-l {
+  font-weight: bold;
+  letter-spacing: 0.125em;
+}
+.format-m {
+  text-decoration: line-through;
+}
+.format-n {
+  text-decoration: underline;
+}
+.format-o {
+  font-style: italic;
+}
+
+/* Tooltip panel (#minetip-tooltip from wiki minetip.js) */
+#minetip-tooltip {
+  position: fixed;
+  background-color: rgba(16, 0, 16, 0.94);
+  border-top: 0.125em solid rgba(80, 0, 255, 0.31);
+  border-bottom: 0.125em solid rgba(40, 0, 127, 0.31);
+  color: #fff;
+  padding: 0.125em 0.25em;
+  font-family: "Minecraft", "Courier New", Consolas, monospace;
+  font-size: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1.25em;
+  text-shadow: 0.125em 0.125em 0 #3f3f3f;
+  margin: 0.25em 0.375em;
+  z-index: 10000;
+  max-width: min(420px, 90vw);
+}
+
+#minetip-tooltip::before {
+  content: "";
+  position: absolute;
+  top: -0.25em;
+  right: -0.125em;
+  bottom: -0.25em;
+  left: -0.125em;
+  border: 0.125em solid rgba(16, 0, 16, 0.94);
+}
+
+#minetip-tooltip::after {
+  content: "";
+  position: absolute;
+  top: -0.125em;
+  right: -0.25em;
+  bottom: -0.125em;
+  left: -0.25em;
+  background-image:
+    linear-gradient(rgba(80, 0, 255, 0.31), rgba(40, 0, 127, 0.31)),
+    linear-gradient(rgba(80, 0, 255, 0.31), rgba(40, 0, 127, 0.31));
+  background-size: 0.125em 100%;
+  background-repeat: no-repeat;
+  background-position: left, right;
+  border: solid rgba(16, 0, 16, 0.94);
+  border-width: 0 0.125em;
+  pointer-events: none;
+}
+
+#minetip-tooltip .title {
+  display: block;
+}
+
+#minetip-tooltip .description {
+  display: block;
+  margin-top: 0.25em;
+  white-space: normal;
+}

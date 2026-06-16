@@ -12,6 +12,34 @@ Double-click `start.bat` or run:
 
 This creates a venv, installs dependencies, opens the GUI in your browser, and starts the server.
 
+**Note:** The GUI does not download the item catalog on startup. Run `sync-items.bat` once (or after game updates) to import item types locally.
+
+## Item catalog sync (static resources)
+
+Hypixel item definitions (~5500 items) are static and cached. Sync them manually:
+
+```powershell
+.\sync-items.ps1
+# or: sync-items.bat
+# or: skyblock-agent items import
+```
+
+Saved under:
+
+| File | Location |
+|------|----------|
+| Raw API payload | `data/raw/hypixel_api/resources/items.json` |
+| Searchable catalog | `data/processed/items/catalog.json` |
+| Catalog metadata | `data/processed/items/meta.json` |
+
+```bash
+skyblock-agent items status
+skyblock-agent items search diamond
+skyblock-agent items search --category SWORD
+```
+
+No API key is required for the items resource endpoint.
+
 ## Quick start
 
 ```bash
@@ -56,7 +84,21 @@ skyblock-agent bazaar --search ENCHANTED_DIAMOND --json
 skyblock-agent auctions --page 0 --search "Hyperion" --bin
 ```
 
-The GUI **Market** tab exposes the same data with search and pagination.
+The GUI **Market** tab is a grid browser for Bazaar and Auction House:
+
+- **Bazaar** — all products, paginated (48/page), search, category, sort
+- **Auction House** — paginated API pages, category filter, BIN-only, sort
+- Placeholder inventory icons + wiki-style minetip on hover
+
+## Item tooltips (wiki-style)
+
+Market rows use the same tooltip system as the [Hypixel SkyBlock Wiki](https://hypixel-skyblock.fandom.com/wiki/Hypixel_SkyBlock_Wiki:Style_Manual/UIs):
+
+- `minetip.css` / `minetip.js` — port of `MediaWiki:Common.js/minetip.js`
+- `data-minetip-title` + `data-minetip-text` with Minecraft `&` color codes
+- `/` separates description lines (like in-game / wiki tooltips)
+
+Hover Bazaar or Auction rows in the GUI to preview.
 
 ## API key
 

@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
   <title>Skyblock Agent</title>
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/styles.css?v=2" />
+  <link rel="stylesheet" href="/static/minetip.css?v=2" />
 </head>
 <body>
   <div class="app">
@@ -18,7 +21,7 @@
       </div>
       <nav class="nav">
         <button class="nav-item active" type="button" data-view="profile">Profile</button>
-        <button class="nav-item" type="button" data-view="market">Market</button>
+        <button class="nav-item" type="button" data-view="market">Resources</button>
         <button class="nav-item disabled" type="button" disabled>Wiki</button>
       </nav>
       <div class="sidebar-section">
@@ -40,18 +43,23 @@
       </header>
 
       <header class="topbar hidden" id="market-topbar">
-        <form id="market-form" class="search-bar market-bar">
-          <select id="market-type">
-            <option value="bazaar">Bazaar</option>
-            <option value="auctions">Auction House</option>
+        <form id="market-browser-form" class="search-bar market-bar">
+          <div class="market-tabs-inline">
+            <button type="button" class="market-tab active" data-market="bazaar">Bazaar</button>
+            <button type="button" class="market-tab" data-market="auctions">Auction House</button>
+          </div>
+          <input id="market-query" type="text" placeholder="Search items…" autocomplete="off" />
+          <select id="market-category" title="Category">
+            <option value="">All categories</option>
           </select>
-          <input id="market-query" type="text" placeholder="Search product or item name" autocomplete="off" />
-          <label class="checkbox-label" id="bin-only-wrap">
+          <select id="market-sort" title="Sort">
+            <option value="name">Sort: Name</option>
+          </select>
+          <label class="checkbox-label hidden" id="bin-only-wrap">
             <input id="bin-only" type="checkbox" />
             BIN only
           </label>
-          <input id="auction-page" type="number" min="0" value="0" class="page-input" title="Auction page" />
-          <button type="submit" id="market-btn">Fetch</button>
+          <button type="submit" id="market-refresh">Browse</button>
         </form>
       </header>
 
@@ -123,7 +131,7 @@
       <section id="market-empty" class="empty-state hidden">
         <div class="empty-icon market-icon"></div>
         <h2>Bazaar & Auction House</h2>
-        <p class="muted">Fetch live prices from Hypixel API. Bazaar returns all products; auctions are paginated.</p>
+        <p class="muted">Browse live prices with placeholder icons and wiki-style tooltips. Hover any item for details.</p>
       </section>
 
       <section id="market-content" class="content hidden">
@@ -151,15 +159,19 @@
 
         <div class="card">
           <div class="card-header">
-            <h2 id="market-table-title">Prices</h2>
+            <h2 id="market-table-title">Browse</h2>
             <span id="market-saved" class="pill pill-muted">—</span>
           </div>
-          <div id="market-table" class="market-table"></div>
+          <div id="market-pagination" class="market-pagination"></div>
+          <div id="market-grid" class="market-grid"></div>
         </div>
       </section>
     </main>
   </div>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/minetip.js?v=2"></script>
+  <script src="/static/item-tooltips.js?v=2"></script>
+  <script src="/static/market-browser.js?v=2"></script>
+  <script src="/static/app.js?v=2"></script>
 </body>
 </html>

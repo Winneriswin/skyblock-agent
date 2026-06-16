@@ -6,6 +6,8 @@ from dataclasses import asdict
 from typing import Any
 
 from skyblock_agent.collectors.market_collector import AuctionsPageResult, BazaarSnapshotResult
+from skyblock_agent.models.market import AH_CATEGORIES
+from skyblock_agent.storage.item_index import get_catalog_item
 from skyblock_agent.storage.player_index import PlayerImportRecord
 from skyblock_agent.collectors.player_lookup import LookupResult
 from skyblock_agent.validation.api_recognizer import RecognitionReport
@@ -53,8 +55,13 @@ def build_lookup_payload(lookup: LookupResult, report: RecognitionReport) -> dic
 
 
 def bazaar_product_to_dict(product) -> dict[str, Any]:
+    catalog = get_catalog_item(product.product_id)
+    display_name = str(catalog.get("name") or product.product_id.replace("_", " ")) if catalog else product.product_id.replace("_", " ")
     return {
         "product_id": product.product_id,
+        "display_name": display_name,
+        "category": catalog.get("category") if catalog else None,
+        "tier": catalog.get("tier") if catalog else None,
         "buy_price": product.buy_price,
         "sell_price": product.sell_price,
         "spread": product.spread,
@@ -79,6 +86,7 @@ def auction_to_dict(auction) -> dict[str, Any]:
         "starting_bid": auction.starting_bid,
         "highest_bid_amount": auction.highest_bid_amount,
         "end": auction.end,
+        "item_lore": auction.item_lore,
     }
 
 
@@ -86,19 +94,32 @@ def build_bazaar_payload(
     snapshot: BazaarSnapshotResult,
     *,
     query: str = "",
+    category: str = "",
+    sort: str = "name",
+    offset: int = 0,
     limit: int | None = None,
 ) -> dict[str, Any]:
-    products = snapshot.products
+    matched = snapshot.products
+    total_matched = len(matched)
+    if offset > 0:
+        matched = matched[offset:]
     if limit is not None and limit > 0:
-        products = products[:limit]
+        page_items = matched[:limit]
+    else:
+        page_items = matched
 
     return {
         "last_updated": snapshot.last_updated,
         "total_products": snapshot.total_products,
-        "matched_products": len(snapshot.products),
+        "matched_products": total_matched,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + len(page_items) < total_matched,
         "query": query or None,
+        "category": category or None,
+        "sort": sort,
         "raw_path": str(snapshot.raw_path) if snapshot.raw_path else None,
-        "products": [bazaar_product_to_dict(product) for product in products],
+        "products": [bazaar_product_to_dict(product) for product in page_items],
     }
 
 
@@ -107,6 +128,8 @@ def build_auctions_payload(
     *,
     query: str = "",
     bin_only: bool = False,
+    category: str = "",
+    sort: str = "price",
     limit: int | None = None,
 ) -> dict[str, Any]:
     auctions = page.auctions
@@ -119,8 +142,12 @@ def build_auctions_payload(
         "total_auctions": page.total_auctions,
         "last_updated": page.last_updated,
         "matched_auctions": len(page.auctions),
+        "page_auctions": len(page.auctions),
         "query": query or None,
         "bin_only": bin_only,
+        "category": category or None,
+        "sort": sort,
+        "categories": list(AH_CATEGORIES),
         "raw_path": str(page.raw_path) if page.raw_path else None,
         "auctions": [auction_to_dict(auction) for auction in auctions],
     }

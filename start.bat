@@ -41,5 +41,5 @@ if not errorlevel 1 (
 set HOST=127.0.0.1
 set PORT=8765
 echo [skyblock-agent] Starting GUI at http://%HOST%:%PORT%
-start "" "http://%HOST%:%PORT%"
-skyblock-agent gui --host %HOST% --port %PORT%
+echo Browser opens after the server is ready. Use Ctrl+C to stop.
+".venv\Scripts\skyblock-agent.exe" gui --host %HOST% --port %PORT%
