@@ -1,16 +1,13 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-Write-Host "[skyblock-agent] Preparing environment..."
-
-if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    Write-Host "Creating virtual environment..."
-    python -m venv .venv
+$EnsurePy = if (Test-Path ".venv\Scripts\python.exe") {
+    ".venv\Scripts\python.exe"
+} else {
+    "python"
 }
-
-& ".venv\Scripts\Activate.ps1"
-python -m pip install --upgrade pip | Out-Null
-pip install -e ".[gui]" -q
+& $EnsurePy scripts/ensure_env.py --gui
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (-not (Test-Path ".env")) {
     Write-Host "Creating .env from .env.example..."

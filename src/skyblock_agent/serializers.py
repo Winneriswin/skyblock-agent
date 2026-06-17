@@ -7,6 +7,7 @@ from typing import Any
 
 from skyblock_agent.collectors.market_collector import AuctionsPageResult, BazaarSnapshotResult
 from skyblock_agent.models.market import AH_CATEGORIES
+from skyblock_agent.storage.icon_index import has_icon
 from skyblock_agent.storage.item_index import get_catalog_item
 from skyblock_agent.storage.player_index import PlayerImportRecord
 from skyblock_agent.collectors.player_lookup import LookupResult
@@ -62,6 +63,7 @@ def bazaar_product_to_dict(product) -> dict[str, Any]:
         "display_name": display_name,
         "category": catalog.get("category") if catalog else None,
         "tier": catalog.get("tier") if catalog else None,
+        "has_icon": has_icon(product.product_id),
         "buy_price": product.buy_price,
         "sell_price": product.sell_price,
         "spread": product.spread,

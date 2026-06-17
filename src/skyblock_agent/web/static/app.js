@@ -56,12 +56,17 @@ function switchView(view) {
   } else {
     contentEl?.classList.add("hidden");
     emptyEl?.classList.add("hidden");
-    hideStatus();
+    marketEmptyEl?.classList.remove("hidden");
+    marketContentEl?.classList.add("hidden");
     if (typeof MarketBrowser === "undefined") {
-      showStatus("Market UI is still loading. Please wait or refresh.", true);
+      showStatus("Market UI failed to load. Hard-refresh the page (Ctrl+Shift+R).", true);
       return;
     }
-    MarketBrowser.open();
+    try {
+      MarketBrowser.open();
+    } catch (error) {
+      showStatus(error.message || "Failed to open market view.", true);
+    }
   }
 }
 
@@ -124,9 +129,12 @@ function renderImport(importInfo) {
 }
 
 function renderRecognition(report) {
-  $("recognition-rate").textContent = `${Math.round(report.pass_rate * 100)}%`;
-  $("recognition-summary").textContent =
-    `${report.ok_count}/${report.total_count} fields recognized`;
+  const rateEl = $("recognition-rate");
+  const summaryEl = $("recognition-summary");
+  if (rateEl) rateEl.textContent = `${Math.round(report.pass_rate * 100)}%`;
+  if (summaryEl) {
+    summaryEl.textContent = `${report.ok_count}/${report.total_count} fields recognized`;
+  }
 
   const table = $("recognition-table");
   if (!table) return;
@@ -226,12 +234,23 @@ async function loadHealth() {
     } else {
       parts.push("items: run sync-items");
     }
+    if (data.items_icons?.available) {
+      parts.push(`${data.items_icons.icon_count} icons`);
+    } else if (data.items_catalog?.available) {
+      parts.push("icons: run sync-icons");
+    }
     pill.textContent = parts.join(" · ");
-    pill.className = `pill ${data.api_key_configured && data.items_catalog?.available ? "pill-ok" : "pill-muted"}`;
+    pill.className = `pill ${
+      data.api_key_configured && data.items_catalog?.available && data.items_icons?.available
+        ? "pill-ok"
+        : "pill-muted"
+    }`;
     if (!data.api_key_configured) {
       showStatus(data.message || "Configure HYPIXEL_API_KEY in .env before lookup.", true);
     } else if (!data.items_catalog?.available && data.items_catalog?.hint) {
       showStatus(data.items_catalog.hint, false);
+    } else if (data.items_catalog?.available && !data.items_icons?.available && data.items_icons?.hint) {
+      showStatus(data.items_icons.hint, false);
     }
   } catch {
     pill.textContent = "Server unavailable";
@@ -239,25 +258,7 @@ async function loadHealth() {
   }
 }
 
-function ensureFreshUi() {
-  if (document.querySelector('.nav-item[data-view="market"]')) {
-    sessionStorage.removeItem("skyblock-agent-ui-reload");
-    return true;
-  }
-
-  const reloadKey = "skyblock-agent-ui-reload";
-  if (!sessionStorage.getItem(reloadKey)) {
-    sessionStorage.setItem(reloadKey, "1");
-    location.replace(`${location.pathname}?v=${Date.now()}`);
-    return false;
-  }
-
-  return true;
-}
-
 function initApp() {
-  if (!ensureFreshUi()) return;
-
   const form = $("search-form");
   const searchBtn = $("search-btn");
   const usernameInput = $("username");
@@ -265,6 +266,9 @@ function initApp() {
 
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (activeView !== "profile") {
+      switchView("profile");
+    }
     hideStatus();
     if (searchBtn) searchBtn.disabled = true;
 

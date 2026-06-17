@@ -6,25 +6,15 @@ echo [skyblock-agent] Syncing SkyBlock item catalog (static resources)...
 echo This is NOT run automatically when starting the GUI.
 echo.
 
-if not exist ".venv\Scripts\python.exe" (
-  echo Creating virtual environment...
-  python -m venv .venv
-  if errorlevel 1 (
-    echo Failed to create venv. Install Python 3.9+ and try again.
-    exit /b 1
-  )
+if exist ".venv\Scripts\python.exe" (
+  ".venv\Scripts\python.exe" scripts\ensure_env.py
+) else (
+  python scripts\ensure_env.py
 )
-
-call ".venv\Scripts\activate.bat"
-python -m pip install --upgrade pip >nul
-pip install -e . -q
-if errorlevel 1 (
-  echo Failed to install dependencies.
-  exit /b 1
-)
+if errorlevel 1 exit /b 1
 
 echo Downloading v2/resources/skyblock/items from Hypixel...
-skyblock-agent items import
+".venv\Scripts\skyblock-agent.exe" items import
 set EXITCODE=%ERRORLEVEL%
 
 echo.

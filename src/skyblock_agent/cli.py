@@ -7,6 +7,7 @@ import json
 import sys
 
 from skyblock_agent.collectors.hypixel_client import HypixelApiError
+from skyblock_agent.collectors.icons_importer import IconsImporter
 from skyblock_agent.collectors.items_importer import ItemsImporter
 from skyblock_agent.collectors.market_collector import MarketCollector
 from skyblock_agent.collectors.player_lookup import PlayerLookupService
@@ -16,6 +17,7 @@ from skyblock_agent.serializers import (
     build_lookup_payload,
     profile_result_to_dict,
 )
+from skyblock_agent.storage.icon_index import get_icons_meta, has_icon, icons_are_available
 from skyblock_agent.storage.item_index import catalog_is_available, get_catalog_meta, search_items
 from skyblock_agent.storage.player_index import list_players
 from skyblock_agent.validation.api_recognizer import recognize_player_result
@@ -193,7 +195,8 @@ def cmd_gui(args: argparse.Namespace) -> int:
 
     threading.Thread(target=_open_browser_when_ready, daemon=True).start()
     print(f"Skyblock Agent GUI: {base}")
-    run(host=args.host, port=args.port)
+    print(f"[gui] log_level={args.log_level}")
+    run(host=args.host, port=args.port, log_level=args.log_level)
     return 0
 
 
@@ -373,7 +376,65 @@ def cmd_items_search(args: argparse.Namespace) -> int:
     for item in matches:
         category = item.get("category") or "—"
         tier = item.get("tier") or "—"
-        print(f"{item.get('name')} [{item.get('id')}] · {category} · {tier}")
+        icon_flag = "icon" if has_icon(str(item.get("id") or "")) else "no-icon"
+        print(f"{item.get('name')} [{item.get('id')}] · {category} · {tier} · {icon_flag}")
+    return 0
+
+
+def cmd_items_icons_import(args: argparse.Namespace) -> int:
+    try:
+        with IconsImporter() as importer:
+            result = importer.import_icons(
+                force=args.force,
+                limit=args.limit if args.limit > 0 else None,
+                delay_seconds=0.0 if args.fast else 0.05,
+            )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    meta = result.meta
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "meta": meta.to_dict(),
+                    "manifest_path": str(result.manifest_path),
+                    "meta_path": str(result.meta_path),
+                },
+                indent=2,
+            )
+        )
+    else:
+        print(
+            f"Icons: {meta.downloaded} downloaded, {meta.skipped} skipped, "
+            f"{meta.failed} failed ({meta.coverage_pct:.1f}% catalog coverage)"
+        )
+        print(f"Manifest: {result.manifest_path}")
+        print(f"Meta: {result.meta_path}")
+    return 0
+
+
+def cmd_items_icons_status(args: argparse.Namespace) -> int:
+    if not icons_are_available():
+        print("Item icons: not imported")
+        print("Run: skyblock-agent items icons import  (or sync-icons.bat)")
+        return 1
+
+    meta = get_icons_meta()
+    if meta is None:
+        print("Item icons: meta file unreadable")
+        return 1
+
+    if args.json:
+        print(json.dumps({"available": True, "meta": meta.to_dict()}, indent=2))
+    else:
+        print(
+            f"Item icons: {meta.icon_count} cached "
+            f"({meta.coverage_pct:.1f}% of {meta.catalog_item_count} catalog items)"
+        )
+        print(f"Last sync: {meta.last_imported_at}")
+        print(f"Last run: {meta.downloaded} new, {meta.skipped} skipped, {meta.failed} failed")
     return 0
 
 
@@ -421,6 +482,12 @@ def build_parser() -> argparse.ArgumentParser:
     gui = sub.add_parser("gui", help="Launch the local web UI")
     gui.add_argument("--host", default="127.0.0.1")
     gui.add_argument("--port", type=int, default=8765)
+    gui.add_argument(
+        "--log-level",
+        default="info",
+        choices=["critical", "error", "warning", "info", "debug", "trace"],
+        help="Uvicorn log level (default: info)",
+    )
     gui.set_defaults(func=cmd_gui)
 
     bazaar = sub.add_parser("bazaar", help="Fetch Bazaar prices and save a local snapshot")
@@ -460,6 +527,23 @@ def build_parser() -> argparse.ArgumentParser:
     items_search.add_argument("--limit", type=int, default=20)
     items_search.add_argument("--json", action="store_true")
     items_search.set_defaults(func=cmd_items_search)
+
+    items_icons = items_sub.add_parser("icons", help="Item icon cache (manual sync)")
+    items_icons_sub = items_icons.add_subparsers(dest="icons_command", required=True)
+
+    icons_import = items_icons_sub.add_parser(
+        "import",
+        help="Download item icons to data/processed/items/icons/",
+    )
+    icons_import.add_argument("--force", action="store_true", help="Re-download all icons")
+    icons_import.add_argument("--limit", type=int, default=0, help="Max items (0 = all)")
+    icons_import.add_argument("--fast", action="store_true", help="Skip delay between downloads")
+    icons_import.add_argument("--json", action="store_true")
+    icons_import.set_defaults(func=cmd_items_icons_import)
+
+    icons_status = items_icons_sub.add_parser("status", help="Show local icon cache status")
+    icons_status.add_argument("--json", action="store_true")
+    icons_status.set_defaults(func=cmd_items_icons_status)
 
     return parser
 

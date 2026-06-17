@@ -80,7 +80,11 @@
 
   function renderBazaarCard(product) {
     const tip = ItemTooltips.buildBazaarMinetip(product);
-    const slot = ItemTooltips.createInvslot(product.display_name || product.product_id, tip);
+    const slot = ItemTooltips.createInvslot(
+      product.display_name || product.product_id,
+      tip,
+      product.product_id
+    );
     const label = product.display_name || product.product_id;
     return `
       <article class="market-card">
@@ -327,10 +331,14 @@
   let initialized = false;
 
   function initMarketBrowser() {
-    if (initialized) return;
-    initialized = true;
     bindElements();
-    if (!els.grid) return;
+    if (!els.grid || !els.form) {
+      return false;
+    }
+    if (initialized) {
+      return true;
+    }
+    initialized = true;
 
     els.tabs.forEach((tab) => {
       tab.addEventListener("click", () => switchMode(tab.dataset.market));
@@ -348,12 +356,17 @@
 
     syncControls();
     loadCategoryOptions();
+    return true;
   }
 
   window.MarketBrowser = {
     init: initMarketBrowser,
     open: () => {
-      initMarketBrowser();
+      if (!initMarketBrowser()) {
+        throw new Error("Market browser UI is missing from the page.");
+      }
+      $("market-empty")?.classList.add("hidden");
+      $("market-content")?.classList.remove("hidden");
       if (!state.lastMeta) {
         switchMode("bazaar");
       }

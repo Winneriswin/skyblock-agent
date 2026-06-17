@@ -35,7 +35,7 @@
 
     <main class="main">
       <header class="topbar" id="profile-topbar">
-        <form id="search-form" class="search-bar">
+        <form id="search-form" class="search-bar" action="#" method="get" onsubmit="return false">
           <input id="username" type="text" placeholder="Minecraft username" autocomplete="off" />
           <input id="profile-name" type="text" placeholder="Profile (optional)" autocomplete="off" />
           <button type="submit" id="search-btn">Lookup</button>
@@ -43,7 +43,7 @@
       </header>
 
       <header class="topbar hidden" id="market-topbar">
-        <form id="market-browser-form" class="search-bar market-bar">
+        <form id="market-browser-form" class="search-bar market-bar" action="#" method="get" onsubmit="return false">
           <div class="market-tabs-inline">
             <button type="button" class="market-tab active" data-market="bazaar">Bazaar</button>
             <button type="button" class="market-tab" data-market="auctions">Auction House</button>
@@ -170,7 +170,7 @@
   </div>
 
   <script src="/static/minetip.js?v=2"></script>
-  <script src="/static/item-tooltips.js?v=2"></script>
+  <script src="/static/item-tooltips.js?v=3"></script>
   <script src="/static/market-browser.js?v=2"></script>
   <script src="/static/app.js?v=2"></script>
 </body>

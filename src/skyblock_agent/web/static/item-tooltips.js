@@ -100,7 +100,7 @@ function applyMinetip(element, payload) {
   element.dataset.minetipText = payload.text;
 }
 
-function createInvslot(label, payload) {
+function createInvslot(label, payload, itemId) {
   const slot = document.createElement("span");
   slot.className = "invslot minetip";
   slot.dataset.minetipTitle = payload.title;
@@ -108,10 +108,32 @@ function createInvslot(label, payload) {
 
   const item = document.createElement("span");
   item.className = "invslot-item";
-  const icon = document.createElement("span");
-  icon.className = "invslot-icon";
-  icon.textContent = (label || "?").slice(0, 2).toUpperCase();
-  item.appendChild(icon);
+
+  const fallbackText = (label || itemId || "?").slice(0, 2).toUpperCase();
+  const iconKey = itemId ? String(itemId).trim().toUpperCase() : "";
+
+  if (iconKey) {
+    const img = document.createElement("img");
+    img.className = "invslot-image";
+    img.alt = label || iconKey;
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.src = `/api/items/${encodeURIComponent(iconKey)}/icon`;
+    img.addEventListener("error", () => {
+      img.remove();
+      const icon = document.createElement("span");
+      icon.className = "invslot-icon";
+      icon.textContent = fallbackText;
+      item.appendChild(icon);
+    });
+    item.appendChild(img);
+  } else {
+    const icon = document.createElement("span");
+    icon.className = "invslot-icon";
+    icon.textContent = fallbackText;
+    item.appendChild(icon);
+  }
+
   slot.appendChild(item);
   return slot;
 }

@@ -10,7 +10,7 @@ Double-click `start.bat` or run:
 .\start.ps1
 ```
 
-This creates a venv, installs dependencies, opens the GUI in your browser, and starts the server.
+This creates a venv on first run, opens the GUI in your browser, and starts the server. Later runs skip dependency installation unless `pyproject.toml` changed.
 
 **Note:** The GUI does not download the item catalog on startup. Run `sync-items.bat` once (or after game updates) to import item types locally.
 
@@ -39,6 +39,32 @@ skyblock-agent items search --category SWORD
 ```
 
 No API key is required for the items resource endpoint.
+
+## Item icon sync (local cache)
+
+After importing the item catalog, download 32×32 icons into `data/processed/items/icons/`:
+
+```powershell
+.\sync-icons.ps1
+# or: sync-icons.bat
+# or: skyblock-agent items icons import
+```
+
+| File | Location |
+|------|----------|
+| PNG icons | `data/processed/items/icons/{ITEM_ID}.png` |
+| Icon manifest | `data/processed/items/icons/manifest.json` |
+| Sync metadata | `data/processed/items/icons/meta.json` |
+
+Icons are fetched from [Coflnet](https://sky.coflnet.com/) (SkyBlock item renders), with vanilla Minecraft textures as fallback via [PrismarineJS/minecraft-assets](https://github.com/PrismarineJS/minecraft-assets). The GUI serves them at `/api/items/{id}/icon`.
+
+```bash
+skyblock-agent items icons status
+skyblock-agent items icons import --limit 100   # test run
+skyblock-agent items icons import --force       # re-download all
+```
+
+Icons are **not** downloaded on GUI startup. Run `sync-icons` after `sync-items` when setting up or after major game updates.
 
 ## Quick start
 
@@ -88,7 +114,7 @@ The GUI **Market** tab is a grid browser for Bazaar and Auction House:
 
 - **Bazaar** — all products, paginated (48/page), search, category, sort
 - **Auction House** — paginated API pages, category filter, BIN-only, sort
-- Placeholder inventory icons + wiki-style minetip on hover
+- Item icons in Resources (after `sync-icons`) + wiki-style minetip on hover
 
 ## Item tooltips (wiki-style)
 

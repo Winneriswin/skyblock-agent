@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 from typing import Optional
 
 from skyblock_agent.collectors.hypixel_client import HypixelApiError
@@ -14,17 +15,43 @@ from skyblock_agent.serializers import (
     build_bazaar_payload,
     build_lookup_payload,
 )
+from skyblock_agent.storage.icon_index import get_icon_path, get_icons_meta, has_icon, icons_are_available
 from skyblock_agent.storage.item_index import catalog_is_available, get_catalog_meta, search_items
 from skyblock_agent.storage.player_index import list_players
 from skyblock_agent.validation.api_recognizer import recognize_player_result
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+_INDEX_PATH = STATIC_DIR / "index.html"
+_ASSET_FILES = (
+    "app.js",
+    "market-browser.js",
+    "item-tooltips.js",
+    "minetip.js",
+    "styles.css",
+    "minetip.css",
+    "index.html",
+)
+
+
+def _asset_version() -> str:
+    mtimes = [
+        (STATIC_DIR / name).stat().st_mtime
+        for name in _ASSET_FILES
+        if (STATIC_DIR / name).is_file()
+    ]
+    return str(int(max(mtimes))) if mtimes else "1"
+
+
+def _render_index_html() -> str:
+    html = _INDEX_PATH.read_text(encoding="utf-8")
+    version = _asset_version()
+    return re.sub(r"\?v=\d+", f"?v={version}", html)
 
 
 def create_app():
     try:
         from fastapi import FastAPI, HTTPException, Query
-        from fastapi.responses import FileResponse
+        from fastapi.responses import FileResponse, HTMLResponse
         from fastapi.staticfiles import StaticFiles
     except ImportError as exc:
         raise RuntimeError(
@@ -39,6 +66,8 @@ def create_app():
         message = "ready" if configured else "Set HYPIXEL_API_KEY in .env (use /api new in-game)"
         items_meta = get_catalog_meta()
         items_available = catalog_is_available() and items_meta is not None
+        icons_meta = get_icons_meta()
+        icons_available = icons_are_available() and icons_meta is not None
         return {
             "status": "ok" if configured else "missing_api_key",
             "api_key_configured": configured,
@@ -50,6 +79,15 @@ def create_app():
                 "hint": None
                 if items_available
                 else "Run sync-items.bat to download the item catalog (GUI does not auto-sync)",
+            },
+            "items_icons": {
+                "available": icons_available,
+                "icon_count": icons_meta.icon_count if icons_meta else 0,
+                "coverage_pct": icons_meta.coverage_pct if icons_meta else 0.0,
+                "last_imported_at": icons_meta.last_imported_at if icons_meta else None,
+                "hint": None
+                if icons_available
+                else "Run sync-icons.bat to download item icons (requires item catalog first)",
             },
         }
 
@@ -65,12 +103,21 @@ def create_app():
                 detail="Item catalog not imported. Run sync-items.bat or: skyblock-agent items import",
             )
         items = search_items(q or "", category=category, limit=limit)
+        for item in items:
+            item["has_icon"] = has_icon(str(item.get("id") or ""))
         meta = get_catalog_meta()
         return {
             "items": items,
             "count": len(items),
             "meta": meta.to_dict() if meta else None,
         }
+
+    @app.get("/api/items/{item_id}/icon")
+    def item_icon(item_id: str) -> FileResponse:
+        path = get_icon_path(item_id)
+        if path is None:
+            raise HTTPException(status_code=404, detail="Icon not found. Run sync-icons.bat.")
+        return FileResponse(path, media_type="image/png")
 
     def _http_error(exc: Exception) -> HTTPException:
         if isinstance(exc, RuntimeError):
@@ -184,14 +231,20 @@ def create_app():
         return response
 
     @app.get("/")
-    def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+    def index() -> HTMLResponse:
+        return HTMLResponse(
+            _render_index_html(),
+            headers={
+                "Cache-Control": "no-store, no-cache, must-revalidate",
+                "Pragma": "no-cache",
+            },
+        )
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     return app
 
 
-def run(host: str = "127.0.0.1", port: int = 8765) -> None:
+def run(host: str = "127.0.0.1", port: int = 8765, *, log_level: str = "info") -> None:
     try:
         import uvicorn
     except ImportError as exc:
@@ -199,4 +252,4 @@ def run(host: str = "127.0.0.1", port: int = 8765) -> None:
             'GUI dependencies are missing. Install with: pip install -e ".[gui]"'
         ) from exc
 
-    uvicorn.run(create_app(), host=host, port=port, log_level="info")
+    uvicorn.run(create_app(), host=host, port=port, log_level=log_level)

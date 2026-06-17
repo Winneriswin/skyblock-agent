@@ -5,17 +5,16 @@ Write-Host "[skyblock-agent] Syncing SkyBlock item catalog (static resources)...
 Write-Host "This is NOT run automatically when starting the GUI."
 Write-Host ""
 
-if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    Write-Host "Creating virtual environment..."
-    python -m venv .venv
+$EnsurePy = if (Test-Path ".venv\Scripts\python.exe") {
+    ".venv\Scripts\python.exe"
+} else {
+    "python"
 }
-
-& ".venv\Scripts\Activate.ps1"
-python -m pip install --upgrade pip | Out-Null
-pip install -e . -q
+& $EnsurePy scripts/ensure_env.py
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Downloading v2/resources/skyblock/items from Hypixel..."
-skyblock-agent items import
+& ".venv\Scripts\skyblock-agent.exe" items import
 $exitCode = $LASTEXITCODE
 
 Write-Host ""
