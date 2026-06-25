@@ -40,6 +40,29 @@ skyblock-agent items search --category SWORD
 
 No API key is required for the items resource endpoint.
 
+## Player inventories (Profile GUI)
+
+Lookup responses include parsed inventory containers when the player has **Inventory API** enabled in-game:
+
+| Container | API field |
+|-----------|-----------|
+| Inventory (36) | `inventory.inv_contents` |
+| Armor & Equipment (8) | `inventory.inv_armor` + `inventory.equipment_contents` |
+| Accessory Bag (paginated; API: `talisman_bag`) | `inventory.bag_contents.talisman_bag` |
+| Ender Chest (54–405, paginated) | `inventory.ender_chest_contents` |
+| Backpack (9–45 slots each, paginated) | `inventory.backpack_contents` (numeric keys only) |
+| Wardrobe (4 armor slots per set, paginated) | `inventory.wardrobe_contents` + `inventory.wardrobe_equipped_slot`; optional `backpack_contents` keys `wd*` |
+
+Hypixel often returns `wardrobe_equipped_slot` without `wardrobe_contents` even when Inventory API is enabled. In that case this app shows **currently equipped armor** from `inv_armor` only (saved sets are not available via API).
+
+Backpack storage keys starting with `wd` are wardrobe sets and are shown under **Wardrobe**, not Backpack.
+
+Profile lookup also returns **Collections** from `member.collection`, grouped using Hypixel's official [`/v2/resources/skyblock/collections`](https://api.hypixel.net/v2/resources/skyblock/collections) resource (same categories as in-game: Farming, Mining, Combat, Foraging, Fishing, Rift). The catalog is cached locally on first use under `data/processed/collections/`.
+
+Data is **Base64 + GZip + NBT**; decoded with [`nbtlib`](https://github.com/vberlier/nbtlib) (installed automatically via `pip install -e .`).
+
+If containers show “API disabled”, the player must enable inventory sharing in SkyBlock settings.
+
 ## Item icon sync (local cache)
 
 After importing the item catalog, download 32×32 icons into `data/processed/items/icons/`:
@@ -116,7 +139,34 @@ The GUI **Market** tab is a grid browser for Bazaar and Auction House:
 - **Auction House** — paginated API pages, category filter, BIN-only, sort
 - Item icons in Resources (after `sync-icons`) + wiki-style minetip on hover
 
-## Item tooltips (wiki-style)
+## Item tooltips (local cache)
+
+Full in-game-style tooltips are synced manually from three sources (merged by priority):
+
+| Priority | Source | Saved to |
+|----------|--------|----------|
+| 1 | [NotEnoughUpdates-REPO](https://github.com/NotEnoughUpdates/NotEnoughUpdates-REPO) (`items/*.json` lore) | `data/raw/neu/items/` |
+| 2 | [SkyBlock Wiki](https://hypixel-skyblock.fandom.com/wiki/Module:Inventory_slot/Tooltips) minetip module | `data/raw/wiki/inventory_slot_tooltips.lua` |
+| 3 | Hypixel `v2/resources/skyblock/items` base stats | generated fallback |
+
+```powershell
+.\sync-tooltips.ps1
+# or: sync-tooltips.bat
+# or: skyblock-agent items tooltips import
+skyblock-agent items tooltips status
+skyblock-agent items tooltips import --sources neu,wiki
+```
+
+Output:
+
+| File | Location |
+|------|----------|
+| Searchable tooltip cache | `data/processed/items/tooltips.json` |
+| Import metadata | `data/processed/items/tooltips_meta.json` |
+
+Re-run `sync-items.bat` first if you want Hypixel stat fallbacks to include the latest `stats` fields.
+
+## Item tooltips (wiki-style rendering)
 
 Market rows use the same tooltip system as the [Hypixel SkyBlock Wiki](https://hypixel-skyblock.fandom.com/wiki/Hypixel_SkyBlock_Wiki:Style_Manual/UIs):
 

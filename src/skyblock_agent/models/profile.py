@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from skyblock_agent.models.members import get_member, normalize_member_map
+from skyblock_agent.parsers.dungeon_leveling import dungeon_level_from_experience
 from skyblock_agent.utils.uuid_utils import normalize_uuid
 
 
@@ -140,13 +141,7 @@ def parse_slayers(member: dict[str, Any]) -> list[SlayerInfo]:
 
 def catacombs_level(member: dict[str, Any]) -> float | None:
     exp = _nested_get(member, "dungeons", "dungeon_types", "catacombs", "experience")
-    if exp is None:
-        return None
-    try:
-        # Full level formula needs constants; show raw XP / 100 as rough indicator.
-        return float(exp) / 100.0
-    except (TypeError, ValueError):
-        return None
+    return dungeon_level_from_experience(exp if exp is not None else None)
 
 
 def is_confirmed_member(member: dict[str, Any]) -> bool:

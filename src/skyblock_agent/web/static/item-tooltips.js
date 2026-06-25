@@ -94,17 +94,66 @@ function buildAuctionMinetip(auction) {
   return { title, text: lines.join("/") };
 }
 
-function applyMinetip(element, payload) {
+function bindMinetip(element, payload) {
+  if (window.Minetip?.bindElement) {
+    window.Minetip.bindElement(element, payload);
+    return;
+  }
   element.classList.add("minetip");
-  element.dataset.minetipTitle = payload.title;
-  element.dataset.minetipText = payload.text;
+  const title = payload.title || "";
+  const text = payload.text || "";
+  element._minetipTitle = title;
+  element._minetipText = text;
+  if (title.length + text.length <= 6000) {
+    element.dataset.minetipTitle = title;
+    element.dataset.minetipText = text;
+  } else {
+    delete element.dataset.minetipTitle;
+    delete element.dataset.minetipText;
+  }
 }
 
-function createInvslot(label, payload, itemId) {
+function applyMinetip(element, payload) {
+  bindMinetip(element, payload);
+}
+
+function buildItemStackMinetip(item) {
+  if (item.tooltip_title || item.tooltip_text) {
+    return {
+      title: item.tooltip_title || item.display_name || item.item_id || "Unknown",
+      text: item.tooltip_text || "",
+    };
+  }
+
+  const nameLine = item.name || item.display_name || item.item_id || "Unknown";
+  const normalizedName = String(nameLine).replace(/§/g, "&");
+  if (item.lore && item.lore.length) {
+    const body = item.lore.map((line) => String(line).replace(/§/g, "&")).join("\n");
+    const parsed = loreToMinetip(`${normalizedName}\n${body}`);
+    if (item.item_id) {
+      const extra = parsed.text ? `${parsed.text}/` : "";
+      return {
+        title: parsed.title || normalizedName,
+        text: `${extra}&8${item.item_id}`,
+      };
+    }
+    return parsed.title ? parsed : { title: normalizedName, text: body.split("\n").join("/") };
+  }
+
+  const title = normalizedName.startsWith("&") ? normalizedName : `&f${normalizedName}`;
+  const lines = [];
+  if (item.count > 1) lines.push(`&7Count: &f${item.count}`);
+  if (item.item_id) lines.push(`&8${item.item_id}`);
+  return { title, text: lines.join("/") };
+}
+
+function createInvslot(label, payload, itemId, options = {}) {
+  const useMinetip = options.minetip !== false;
   const slot = document.createElement("span");
-  slot.className = "invslot minetip";
-  slot.dataset.minetipTitle = payload.title;
-  slot.dataset.minetipText = payload.text;
+  slot.className = "invslot";
+  if (useMinetip) {
+    bindMinetip(slot, payload);
+  }
 
   const item = document.createElement("span");
   item.className = "invslot-item";
@@ -115,10 +164,12 @@ function createInvslot(label, payload, itemId) {
   if (iconKey) {
     const img = document.createElement("img");
     img.className = "invslot-image";
+    img.dataset.itemId = iconKey;
     img.alt = label || iconKey;
     img.loading = "lazy";
     img.decoding = "async";
-    img.src = `/api/items/${encodeURIComponent(iconKey)}/icon`;
+    img.draggable = false;
+    img.src = window.ItemIcons ? ItemIcons.iconUrl(iconKey) : `/api/items/${encodeURIComponent(iconKey)}/icon`;
     img.addEventListener("error", () => {
       img.remove();
       const icon = document.createElement("span");
@@ -143,6 +194,8 @@ window.ItemTooltips = {
   buildBazaarMinetip,
   buildCatalogItemMinetip,
   buildAuctionMinetip,
+  buildItemStackMinetip,
+  bindMinetip,
   applyMinetip,
   createInvslot,
 };

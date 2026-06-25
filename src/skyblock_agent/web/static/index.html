@@ -22,11 +22,20 @@
       <nav class="nav">
         <button class="nav-item active" type="button" data-view="profile">Profile</button>
         <button class="nav-item" type="button" data-view="market">Resources</button>
+        <button class="nav-item" type="button" data-view="rng">Drop RNG</button>
         <button class="nav-item disabled" type="button" disabled>Wiki</button>
       </nav>
       <div class="sidebar-section">
         <div class="section-title">Recent imports</div>
         <div id="recent-players" class="recent-players"></div>
+      </div>
+      <div class="sidebar-section texture-section">
+        <div class="section-title">Item icons</div>
+        <div class="texture-toggle" id="texture-toggle" role="group" aria-label="Item icon texture">
+          <button type="button" class="texture-btn active" data-texture="official">Official</button>
+          <button type="button" class="texture-btn" data-texture="vanilla">Vanilla</button>
+        </div>
+        <div class="texture-hint muted">Official: SkyBlock icons · Vanilla: in-game base item texture</div>
       </div>
       <div class="sidebar-footer">
         <div id="health-pill" class="pill pill-muted">Checking API key…</div>
@@ -107,6 +116,51 @@
 
         <div class="card">
           <div class="card-header">
+            <h2>Catacombs</h2>
+            <span id="catacombs-badge" class="pill pill-muted">—</span>
+          </div>
+          <div id="catacombs-meta" class="muted inventory-meta"></div>
+          <div id="catacombs-classes" class="catacombs-classes"></div>
+          <div class="profile-tabs" id="catacombs-mode-tabs"></div>
+          <div id="catacombs-floors" class="catacombs-floors"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Collections</h2>
+            <span id="collections-badge" class="pill pill-muted">—</span>
+          </div>
+          <div id="collections-meta" class="muted inventory-meta"></div>
+          <div class="profile-tabs" id="collections-tabs"></div>
+          <div id="collections-list" class="collections-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Inventories</h2>
+            <span id="inventory-api-badge" class="pill pill-muted">—</span>
+          </div>
+          <div class="inventory-layout">
+            <div class="inventory-main">
+              <div class="profile-tabs" id="inventory-tabs"></div>
+              <div id="inventory-meta" class="muted inventory-meta"></div>
+              <div id="inventory-notice" class="inventory-notice hidden"></div>
+              <div id="inventory-pages" class="inventory-pages hidden"></div>
+              <div id="inventory-grid" class="inventory-grid"></div>
+            </div>
+            <aside class="inventory-debug-panel">
+              <div class="inventory-debug-header">
+                <h3>Tooltip debug</h3>
+                <span class="pill pill-muted">BZ / AH</span>
+              </div>
+              <p class="muted inventory-debug-hint">Same render path as Resources. Hover to compare with inventory on the left.</p>
+              <div id="tooltip-debug-grid" class="market-grid inventory-debug-grid"></div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
             <h2>Imported API Data</h2>
             <span id="import-time" class="pill pill-ok">—</span>
           </div>
@@ -132,6 +186,30 @@
         <div class="empty-icon market-icon"></div>
         <h2>Bazaar & Auction House</h2>
         <p class="muted">Browse live prices with placeholder icons and wiki-style tooltips. Hover any item for details.</p>
+      </section>
+
+      <section id="rng-view" class="content hidden">
+        <div class="hero card">
+          <div>
+            <div class="eyebrow">Tools</div>
+            <h1>Drop RNG</h1>
+            <div class="muted">掉落概率 · 期望次数 · 运气评估（开发中）</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>掉落配置</h2>
+          </div>
+          <div class="rng-reserved" aria-hidden="true"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>统计结果</h2>
+          </div>
+          <div class="rng-reserved" aria-hidden="true"></div>
+        </div>
       </section>
 
       <section id="market-content" class="content hidden">
@@ -170,8 +248,13 @@
   </div>
 
   <script src="/static/minetip.js?v=2"></script>
+  <script src="/static/item-icons.js?v=1"></script>
   <script src="/static/item-tooltips.js?v=3"></script>
+  <script src="/static/profile-inventory.js?v=1"></script>
+  <script src="/static/profile-collections.js?v=1"></script>
+  <script src="/static/profile-catacombs.js?v=1"></script>
   <script src="/static/market-browser.js?v=2"></script>
+  <script src="/static/tooltip-debug.js?v=1"></script>
   <script src="/static/app.js?v=2"></script>
 </body>
 </html>

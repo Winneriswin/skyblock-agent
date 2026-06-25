@@ -11,8 +11,12 @@ from typing import Any
 from skyblock_agent.config import DATA_DIR
 
 ICONS_DIR = DATA_DIR / "processed" / "items" / "icons"
+VANILLA_ICONS_DIR = ICONS_DIR / "vanilla"
 META_PATH = ICONS_DIR / "meta.json"
 MANIFEST_PATH = ICONS_DIR / "manifest.json"
+
+_manifest_cache: dict[str, dict[str, Any]] | None = None
+_manifest_mtime: float | None = None
 
 _SAFE_ID = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -60,17 +64,77 @@ def icon_filename(item_id: str) -> str:
     return f"{safe or 'UNKNOWN'}.png"
 
 
+def vanilla_icon_filename(material: str) -> str:
+    from skyblock_agent.collectors.icon_client import _material_slug
+
+    slug = _material_slug(material)
+    safe = _SAFE_ID.sub("_", slug or "unknown")
+    return f"{safe or 'UNKNOWN'}.png"
+
+
+def get_vanilla_icon_path(material: str) -> Path | None:
+    if not material:
+        return None
+    path = VANILLA_ICONS_DIR / vanilla_icon_filename(material)
+    return path if path.is_file() and path.stat().st_size >= 64 else None
+
+
+def get_vanilla_icon_path_for_item(item_id: str) -> Path | None:
+    from skyblock_agent.storage.item_index import get_catalog_item
+
+    catalog = get_catalog_item(item_id.strip().upper())
+    if not catalog:
+        return None
+    material = catalog.get("material")
+    if not isinstance(material, str) or not material.strip():
+        return None
+    return get_vanilla_icon_path(material)
+
+
+def ensure_vanilla_icon_for_item(item_id: str, client) -> Path | None:
+    """Return cached vanilla icon path, downloading on first request if needed."""
+    from skyblock_agent.storage.item_index import get_catalog_item
+
+    key = item_id.strip().upper()
+    existing = get_vanilla_icon_path_for_item(key)
+    if existing is not None:
+        return existing
+
+    catalog = get_catalog_item(key)
+    if not catalog:
+        return None
+    material = catalog.get("material")
+    if not isinstance(material, str) or not material.strip():
+        return None
+
+    result = client.fetch_vanilla_icon(material)
+    if result is None:
+        return None
+
+    VANILLA_ICONS_DIR.mkdir(parents=True, exist_ok=True)
+    path = VANILLA_ICONS_DIR / vanilla_icon_filename(material)
+    path.write_bytes(result.data)
+    return path
+
+
 def icons_are_available() -> bool:
     return META_PATH.exists() and MANIFEST_PATH.exists()
 
 
 def load_manifest() -> dict[str, dict[str, Any]]:
+    global _manifest_cache, _manifest_mtime
     if not MANIFEST_PATH.exists():
         return {}
+    mtime = MANIFEST_PATH.stat().st_mtime
+    if _manifest_cache is not None and _manifest_mtime == mtime:
+        return _manifest_cache
+
     data = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     items = data.get("items")
     if not isinstance(items, dict):
-        return {}
+        items = {}
+    _manifest_cache = items
+    _manifest_mtime = mtime
     return items
 
 
@@ -132,6 +196,9 @@ def save_icon_cache(
         json.dumps(manifest, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
+    global _manifest_cache, _manifest_mtime
+    _manifest_cache = manifest["items"]
+    _manifest_mtime = MANIFEST_PATH.stat().st_mtime
 
     meta = {
         "last_imported_at": last_imported_at,

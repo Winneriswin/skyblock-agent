@@ -82,6 +82,9 @@ class HypixelClient:
     def get_player(self, uuid: str) -> dict[str, Any]:
         return self.get("v2/player", {"uuid": uuid})
 
+    def get_player_by_username(self, username: str) -> dict[str, Any]:
+        return self.get("v2/player", {"name": username.strip()})
+
     def get_skyblock_profiles(self, uuid: str) -> dict[str, Any]:
         return self.get("v2/skyblock/profiles", {"uuid": uuid})
 

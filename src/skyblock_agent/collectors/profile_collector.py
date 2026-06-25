@@ -43,10 +43,29 @@ class ProfileCollector:
     def fetch_by_username(
         self, username: str, *, profile_name: str | None = None
     ) -> PlayerProfileResult:
-        uuid = self.mojang.lookup_uuid(username)
+        uuid = self._resolve_uuid(username)
         if uuid is None:
             raise HypixelApiError(f"Player not found: {username}")
         return self.fetch_by_uuid(uuid, username=username, profile_name=profile_name)
+
+    def _resolve_uuid(self, username: str) -> str | None:
+        try:
+            return self.mojang.lookup_uuid(username)
+        except HypixelApiError:
+            return self._lookup_uuid_via_hypixel(username)
+
+    def _lookup_uuid_via_hypixel(self, username: str) -> str | None:
+        try:
+            payload = self.hypixel.get_player_by_username(username)
+        except HypixelApiError:
+            return None
+        player = payload.get("player")
+        if not isinstance(player, dict):
+            return None
+        raw_uuid = player.get("uuid")
+        if isinstance(raw_uuid, str) and raw_uuid.strip():
+            return normalize_uuid(raw_uuid)
+        return None
 
     def fetch_by_uuid(
         self,

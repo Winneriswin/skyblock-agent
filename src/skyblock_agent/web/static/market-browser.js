@@ -98,7 +98,7 @@
 
   function renderAuctionCard(auction) {
     const tip = ItemTooltips.buildAuctionMinetip(auction);
-    const slot = ItemTooltips.createInvslot(auction.item_name, tip);
+    const slot = ItemTooltips.createInvslot(auction.item_name, tip, auction.item_id);
     const badge = auction.bin
       ? '<span class="pill pill-ok market-card-badge">BIN</span>'
       : '<span class="pill pill-muted market-card-badge">Bid</span>';
@@ -129,6 +129,9 @@
       )
       .join("");
     grid.innerHTML = cards;
+    if (window.Minetip?.hydrate) {
+      Minetip.hydrate(grid);
+    }
   }
 
   function renderPagination(data) {
@@ -359,6 +362,16 @@
     return true;
   }
 
+  function refreshIcons() {
+    if (state.lastMeta) {
+      renderGrid(state.lastMeta);
+      return;
+    }
+    if (window.ItemIcons) {
+      ItemIcons.refreshImages(els.grid);
+    }
+  }
+
   window.MarketBrowser = {
     init: initMarketBrowser,
     open: () => {
@@ -372,5 +385,6 @@
       }
     },
     refresh: loadMarket,
+    refreshIcons,
   };
 })();

@@ -41,6 +41,7 @@ class AuctionListing:
     highest_bid_amount: int
     end: int
     item_lore: str
+    item_id: str | None = None
 
     @property
     def price(self) -> int:
@@ -100,6 +101,21 @@ def parse_bazaar_products(payload: dict[str, Any]) -> list[BazaarProduct]:
     return products
 
 
+def _parse_auction_item_id(raw: dict[str, Any]) -> str | None:
+    item_bytes = raw.get("item_bytes")
+    if not item_bytes:
+        return None
+    try:
+        from skyblock_agent.parsers.nbt_inventory import parse_inventory_blob
+
+        stacks = parse_inventory_blob(item_bytes)
+        if stacks and stacks[0].item_id:
+            return stacks[0].item_id
+    except Exception:
+        return None
+    return None
+
+
 def parse_auction(raw: dict[str, Any]) -> AuctionListing | None:
     if not isinstance(raw, dict):
         return None
@@ -118,6 +134,7 @@ def parse_auction(raw: dict[str, Any]) -> AuctionListing | None:
         highest_bid_amount=_int(raw.get("highest_bid_amount")),
         end=_int(raw.get("end")),
         item_lore=str(raw.get("item_lore") or ""),
+        item_id=_parse_auction_item_id(raw),
     )
 
 

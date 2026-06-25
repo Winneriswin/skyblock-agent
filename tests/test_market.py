@@ -44,6 +44,19 @@ def test_parse_auctions():
     aod = next(a for a in auctions if "Dragons" in a.item_name)
     assert aod.bin is True
     assert aod.price == 5_000_000
+    assert aod.item_id is None
+
+
+def test_parse_auction_item_id_from_item_bytes():
+    from skyblock_agent.models.market import parse_auction
+
+    payload = json.loads(
+        Path("data/raw/hypixel_api/auctions/page_0.json").read_text(encoding="utf-8")
+    )
+    raw = payload["data"]["auctions"][0]
+    parsed = parse_auction(raw)
+    assert parsed is not None
+    assert parsed.item_id == "SNIPER_HELMET"
 
 
 def test_filter_auctions_bin_only():

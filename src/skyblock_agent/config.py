@@ -19,6 +19,10 @@ HYPIXEL_API_BASE = "https://api.hypixel.net"
 MOJANG_PROFILE_LOOKUP = (
     "https://api.minecraftservices.com/minecraft/profile/lookup/name"
 )
+MOJANG_LEGACY_PROFILE_LOOKUP = "https://api.mojang.com/users/profiles/minecraft"
+MOJANG_ASHCON_LOOKUP = "https://api.ashcon.app/mojang/v2/user"
+MOJANG_LEGACY_PROFILE_LOOKUP = "https://api.mojang.com/users/profiles/minecraft"
+ASHCON_PROFILE_LOOKUP = "https://api.ashcon.app/mojang/v2/user"
 
 _PLACEHOLDER_KEYS = frozenset(
     {

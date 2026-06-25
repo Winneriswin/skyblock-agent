@@ -14,6 +14,8 @@ class SkyblockItem:
     tier: str | None
     material: str | None
     npc_sell_price: int | None
+    stats: dict[str, float] | None = None
+    dungeon_item: bool | None = None
 
 
 def _optional_int(value: Any) -> int | None:
@@ -23,6 +25,26 @@ def _optional_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_stats(raw: Any) -> dict[str, float] | None:
+    if not isinstance(raw, dict):
+        return None
+    stats: dict[str, float] = {}
+    for key, value in raw.items():
+        parsed = _optional_float(value)
+        if parsed is not None:
+            stats[str(key)] = parsed
+    return stats or None
 
 
 def parse_item(raw: dict[str, Any]) -> SkyblockItem | None:
@@ -44,6 +66,8 @@ def parse_item(raw: dict[str, Any]) -> SkyblockItem | None:
         tier=str(tier) if tier else None,
         material=str(material) if material else None,
         npc_sell_price=_optional_int(raw.get("npc_sell_price")),
+        stats=_parse_stats(raw.get("stats")),
+        dungeon_item=bool(raw.get("dungeon_item")) if raw.get("dungeon_item") is not None else None,
     )
 
 
@@ -62,7 +86,7 @@ def parse_items(payload: dict[str, Any]) -> list[SkyblockItem]:
 
 
 def item_to_dict(item: SkyblockItem) -> dict[str, Any]:
-    return {
+    payload = {
         "id": item.id,
         "name": item.name,
         "category": item.category,
@@ -70,6 +94,11 @@ def item_to_dict(item: SkyblockItem) -> dict[str, Any]:
         "material": item.material,
         "npc_sell_price": item.npc_sell_price,
     }
+    if item.stats:
+        payload["stats"] = item.stats
+    if item.dungeon_item is not None:
+        payload["dungeon_item"] = item.dungeon_item
+    return payload
 
 
 def build_category_index(items: list[SkyblockItem]) -> dict[str, list[str]]:

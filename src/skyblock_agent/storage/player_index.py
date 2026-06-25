@@ -59,6 +59,28 @@ def get_player(username: str) -> PlayerImportRecord | None:
     )
 
 
+def delete_player(username: str, *, delete_files: bool = True) -> bool:
+    index = _load_index()
+    players = index.setdefault("players", {})
+    key = username.strip().lower()
+    entry = players.get(key)
+    if not isinstance(entry, dict):
+        return False
+
+    if delete_files:
+        for path_str in (entry.get("saved_files") or {}).values():
+            try:
+                path = Path(str(path_str))
+                if path.is_file():
+                    path.unlink()
+            except OSError:
+                pass
+
+    del players[key]
+    _save_index(index)
+    return True
+
+
 def list_players() -> list[PlayerImportRecord]:
     players = _load_index().get("players", {})
     records: list[PlayerImportRecord] = []

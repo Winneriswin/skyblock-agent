@@ -79,3 +79,39 @@ def test_lookup_imports_and_indexes(tmp_path, monkeypatch):
 
     indexed = list_players()
     assert len(indexed) == 1
+
+
+def test_delete_player_removes_index_and_files(tmp_path, monkeypatch):
+    monkeypatch.setenv("SKYBLOCK_AGENT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("HYPIXEL_API_KEY", "test-key")
+
+    from skyblock_agent import config
+
+    config.DATA_DIR = tmp_path
+    config.RAW_HYPIXEL_DIR = tmp_path / "raw" / "hypixel_api"
+
+    from skyblock_agent.storage import player_index, raw_store
+
+    player_index.INDEX_PATH = tmp_path / "processed" / "players" / "index.json"
+    raw_store.RAW_HYPIXEL_DIR = tmp_path / "raw" / "hypixel_api"
+
+    player_file = tmp_path / "raw" / "hypixel_api" / "player" / "sample.json"
+    player_file.parent.mkdir(parents=True, exist_ok=True)
+    player_file.write_text("{}", encoding="utf-8")
+
+    player_index.upsert_player(
+        player_index.PlayerImportRecord(
+            username="SamplePlayer",
+            uuid="28667672039044989b0019b14a2c34d6",
+            last_imported_at=player_index.now_iso(),
+            profiles=["Apple"],
+            selected_profile="Apple",
+            saved_files={"player": str(player_file)},
+        )
+    )
+
+    assert player_index.delete_player("SamplePlayer") is True
+    assert player_index.get_player("SamplePlayer") is None
+    assert not player_file.exists()
+    assert player_index.list_players() == []
+    assert player_index.delete_player("MissingPlayer") is False

@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 from typing import Optional
 
+from skyblock_agent.collectors.icon_client import IconClient
 from skyblock_agent.collectors.hypixel_client import HypixelApiError
 from skyblock_agent.collectors.market_collector import MarketCollector
 from skyblock_agent.collectors.player_lookup import PlayerLookupService
@@ -15,17 +16,51 @@ from skyblock_agent.serializers import (
     build_bazaar_payload,
     build_lookup_payload,
 )
-from skyblock_agent.storage.icon_index import get_icon_path, get_icons_meta, has_icon, icons_are_available
-from skyblock_agent.storage.item_index import catalog_is_available, get_catalog_meta, search_items
-from skyblock_agent.storage.player_index import list_players
+from skyblock_agent.storage.icon_index import (
+    ensure_vanilla_icon_for_item,
+    get_icon_path,
+    get_icons_meta,
+    get_vanilla_icon_path_for_item,
+    has_icon,
+    icons_are_available,
+)
+from skyblock_agent.storage.item_index import catalog_is_available, get_catalog_item, get_catalog_meta, search_items
+from skyblock_agent.storage.tooltips_index import get_item_tooltip, get_tooltips_meta, tooltips_are_available
+from skyblock_agent.storage.player_index import delete_player, list_players
 from skyblock_agent.validation.api_recognizer import recognize_player_result
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 _INDEX_PATH = STATIC_DIR / "index.html"
+_ICON_CLIENT: IconClient | None = None
+
+
+def _get_icon_client() -> IconClient:
+    global _ICON_CLIENT
+    if _ICON_CLIENT is None:
+        _ICON_CLIENT = IconClient()
+    return _ICON_CLIENT
+
+
+def _resolve_icon_path(item_id: str, *, texture: str) -> Path | None:
+    key = item_id.strip().upper()
+    mode = texture.strip().lower()
+    if mode == "vanilla":
+        path = get_vanilla_icon_path_for_item(key)
+        if path is None:
+            path = ensure_vanilla_icon_for_item(key, _get_icon_client())
+        return path
+    return get_icon_path(key)
+
+
 _ASSET_FILES = (
     "app.js",
     "market-browser.js",
+    "item-icons.js",
     "item-tooltips.js",
+    "profile-inventory.js",
+    "profile-collections.js",
+    "profile-catacombs.js",
+    "tooltip-debug.js",
     "minetip.js",
     "styles.css",
     "minetip.css",
@@ -68,6 +103,8 @@ def create_app():
         items_available = catalog_is_available() and items_meta is not None
         icons_meta = get_icons_meta()
         icons_available = icons_are_available() and icons_meta is not None
+        tooltips_meta = get_tooltips_meta()
+        tooltips_available = tooltips_are_available() and tooltips_meta is not None
         return {
             "status": "ok" if configured else "missing_api_key",
             "api_key_configured": configured,
@@ -88,6 +125,15 @@ def create_app():
                 "hint": None
                 if icons_available
                 else "Run sync-icons.bat to download item icons (requires item catalog first)",
+            },
+            "items_tooltips": {
+                "available": tooltips_available,
+                "item_count": tooltips_meta.item_count if tooltips_meta else 0,
+                "sources": tooltips_meta.sources if tooltips_meta else {},
+                "last_imported_at": tooltips_meta.last_imported_at if tooltips_meta else None,
+                "hint": None
+                if tooltips_available
+                else "Run sync-tooltips.bat to download NEU/wiki tooltips (GUI does not auto-sync)",
             },
         }
 
@@ -113,11 +159,42 @@ def create_app():
         }
 
     @app.get("/api/items/{item_id}/icon")
-    def item_icon(item_id: str) -> FileResponse:
-        path = get_icon_path(item_id)
+    def item_icon(
+        item_id: str,
+        texture: str = Query(default="official", description="official (SkyBlock) or vanilla (Minecraft material)"),
+    ) -> FileResponse:
+        mode = texture.strip().lower()
+        if mode not in {"official", "vanilla"}:
+            raise HTTPException(status_code=400, detail="texture must be official or vanilla")
+
+        path = _resolve_icon_path(item_id, texture=mode)
         if path is None:
+            if mode == "vanilla":
+                raise HTTPException(
+                    status_code=404,
+                    detail="Vanilla icon not found for this item (missing material or texture).",
+                )
             raise HTTPException(status_code=404, detail="Icon not found. Run sync-icons.bat.")
         return FileResponse(path, media_type="image/png")
+
+    @app.get("/api/items/{item_id}/tooltip")
+    def item_tooltip(item_id: str) -> dict[str, object]:
+        if not tooltips_are_available():
+            raise HTTPException(
+                status_code=503,
+                detail="Tooltip cache not imported. Run sync-tooltips.bat or: skyblock-agent items tooltips import",
+            )
+        tooltip = get_item_tooltip(item_id.strip().upper())
+        if tooltip is None:
+            catalog = get_catalog_item(item_id.strip().upper())
+            if catalog:
+                return {
+                    "item_id": catalog.get("id"),
+                    "found": False,
+                    "catalog": catalog,
+                }
+            raise HTTPException(status_code=404, detail="Tooltip not found for item")
+        return {"item_id": item_id.strip().upper(), "found": True, "tooltip": tooltip}
 
     def _http_error(exc: Exception) -> HTTPException:
         if isinstance(exc, RuntimeError):
@@ -151,6 +228,12 @@ def create_app():
             "players": [record.to_dict() for record in records],
             "count": len(records),
         }
+
+    @app.delete("/api/players/{username}")
+    def remove_player(username: str) -> dict[str, object]:
+        if not delete_player(username):
+            raise HTTPException(status_code=404, detail="Player not found in import index")
+        return {"deleted": True, "username": username}
 
     @app.get("/api/profile/{username}")
     def fetch_profile(

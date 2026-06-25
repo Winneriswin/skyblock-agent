@@ -14,6 +14,9 @@ ITEMS_DIR = DATA_DIR / "processed" / "items"
 META_PATH = ITEMS_DIR / "meta.json"
 CATALOG_PATH = ITEMS_DIR / "catalog.json"
 
+_catalog_cache: dict[str, dict[str, Any]] | None = None
+_catalog_mtime: float | None = None
+
 
 @dataclass
 class ItemsCatalogMeta:
@@ -88,12 +91,19 @@ def save_catalog(
 
 
 def load_catalog_items() -> dict[str, dict[str, Any]]:
+    global _catalog_cache, _catalog_mtime
     if not CATALOG_PATH.exists():
         return {}
+    mtime = CATALOG_PATH.stat().st_mtime
+    if _catalog_cache is not None and _catalog_mtime == mtime:
+        return _catalog_cache
+
     data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     items = data.get("items")
     if not isinstance(items, dict):
-        return {}
+        items = {}
+    _catalog_cache = items
+    _catalog_mtime = mtime
     return items
 
 

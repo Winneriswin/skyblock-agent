@@ -9,6 +9,7 @@ import sys
 from skyblock_agent.collectors.hypixel_client import HypixelApiError
 from skyblock_agent.collectors.icons_importer import IconsImporter
 from skyblock_agent.collectors.items_importer import ItemsImporter
+from skyblock_agent.collectors.tooltips_importer import TooltipsImporter
 from skyblock_agent.collectors.market_collector import MarketCollector
 from skyblock_agent.collectors.player_lookup import PlayerLookupService
 from skyblock_agent.serializers import (
@@ -19,6 +20,7 @@ from skyblock_agent.serializers import (
 )
 from skyblock_agent.storage.icon_index import get_icons_meta, has_icon, icons_are_available
 from skyblock_agent.storage.item_index import catalog_is_available, get_catalog_meta, search_items
+from skyblock_agent.storage.tooltips_index import get_tooltips_meta, tooltips_are_available
 from skyblock_agent.storage.player_index import list_players
 from skyblock_agent.validation.api_recognizer import recognize_player_result
 
@@ -381,6 +383,57 @@ def cmd_items_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_items_tooltips_import(args: argparse.Namespace) -> int:
+    sources = tuple(part.strip() for part in args.sources.split(",") if part.strip())
+    try:
+        with TooltipsImporter() as importer:
+            result = importer.import_tooltips(sources=sources, save_raw=not args.no_save)
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "item_count": result.item_count,
+                    "sources": result.sources,
+                    "tooltips_path": str(result.tooltips_path),
+                    "meta_path": str(result.meta_path),
+                },
+                indent=2,
+            )
+        )
+    else:
+        print(f"Imported {result.item_count} item tooltips")
+        for source, count in sorted(result.sources.items()):
+            print(f"  {source}: {count} records merged")
+        print(f"Tooltips: {result.tooltips_path}")
+        print(f"Meta: {result.meta_path}")
+    return 0
+
+
+def cmd_items_tooltips_status(args: argparse.Namespace) -> int:
+    if not tooltips_are_available():
+        print("Item tooltips: not imported")
+        print("Run: skyblock-agent items tooltips import  (or sync-tooltips.bat)")
+        return 1
+
+    meta = get_tooltips_meta()
+    if meta is None:
+        print("Item tooltips: meta file unreadable")
+        return 1
+
+    if args.json:
+        print(json.dumps({"available": True, "meta": meta.to_dict()}, indent=2))
+    else:
+        print(f"Item tooltips: {meta.item_count} items")
+        print(f"Imported at: {meta.last_imported_at}")
+        for source, count in sorted(meta.sources.items()):
+            print(f"  {source}: {count}")
+    return 0
+
+
 def cmd_items_icons_import(args: argparse.Namespace) -> int:
     try:
         with IconsImporter() as importer:
@@ -544,6 +597,26 @@ def build_parser() -> argparse.ArgumentParser:
     icons_status = items_icons_sub.add_parser("status", help="Show local icon cache status")
     icons_status.add_argument("--json", action="store_true")
     icons_status.set_defaults(func=cmd_items_icons_status)
+
+    items_tooltips = items_sub.add_parser("tooltips", help="Item tooltip cache (NEU + wiki + Hypixel)")
+    tooltips_sub = items_tooltips.add_subparsers(dest="tooltips_command", required=True)
+
+    tooltips_import = tooltips_sub.add_parser(
+        "import",
+        help="Download tooltips from NEU repo, SkyBlock wiki, and Hypixel stats",
+    )
+    tooltips_import.add_argument(
+        "--sources",
+        default="neu,wiki,hypixel",
+        help="Comma-separated sources: neu, wiki, hypixel (default: all)",
+    )
+    tooltips_import.add_argument("--json", action="store_true")
+    tooltips_import.add_argument("--no-save", action="store_true", help="Skip writing raw dumps to data/")
+    tooltips_import.set_defaults(func=cmd_items_tooltips_import)
+
+    tooltips_status = tooltips_sub.add_parser("status", help="Show local tooltip cache status")
+    tooltips_status.add_argument("--json", action="store_true")
+    tooltips_status.set_defaults(func=cmd_items_tooltips_status)
 
     return parser
 

@@ -156,9 +156,10 @@
   pointer-events: none;
   line-height: 1.25em;
   text-shadow: 0.125em 0.125em 0 #3f3f3f;
-  margin: 0.25em 0.375em;
-  z-index: 10000;
+  margin: 0;
+  z-index: 2147483647;
   max-width: min(420px, 90vw);
+  isolation: isolate;
 }
 
 #minetip-tooltip::before {
@@ -191,10 +192,14 @@
 
 #minetip-tooltip .title {
   display: block;
+  position: relative;
+  z-index: 1;
 }
 
 #minetip-tooltip .description {
   display: block;
   margin-top: 0.25em;
   white-space: normal;
+  position: relative;
+  z-index: 1;
 }

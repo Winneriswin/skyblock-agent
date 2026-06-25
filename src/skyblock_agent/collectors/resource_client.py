@@ -64,6 +64,9 @@ class ResourceClient:
     def get_skyblock_items(self) -> dict[str, Any]:
         return self.get("v2/resources/skyblock/items")
 
+    def get_skyblock_collections(self) -> dict[str, Any]:
+        return self.get("v2/resources/skyblock/collections")
+
     def close(self) -> None:
         self._session.close()
 

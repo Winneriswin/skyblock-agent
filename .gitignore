@@ -1,5 +1,9 @@
+# Secrets (never commit API keys)
 .env
 .env.pending
+.env.local
+
+# Python
 .venv/
 venv/
 __pycache__/
@@ -8,6 +12,24 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
-data/raw/
-data/processed/
+.mypy_cache/
+.ruff_cache/
+
+# Local runtime data (raw API dumps, item catalog, icons, player index)
+data/
+
+# Downloaded Hypixel API reference (offline docs, swagger, PublicAPI zip)
+resourses/
+resources/
+
+# SQLite / local DB
 *.db
+
+# OS noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Browser "Save Page" exports (local debugging snapshots)
+Skyblock Agent.html
+Skyblock Agent_files/

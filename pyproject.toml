@@ -12,6 +12,7 @@ license = "LGPL-3.0-or-later"
 dependencies = [
     "requests>=2.31.0",
     "python-dotenv>=1.0.0",
+    "nbtlib>=2.0.4",
 ]
 
 [project.optional-dependencies]

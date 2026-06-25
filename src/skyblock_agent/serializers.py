@@ -7,10 +7,16 @@ from typing import Any
 
 from skyblock_agent.collectors.market_collector import AuctionsPageResult, BazaarSnapshotResult
 from skyblock_agent.models.market import AH_CATEGORIES
-from skyblock_agent.storage.icon_index import has_icon
+from skyblock_agent.storage.icon_index import has_icon, load_manifest
 from skyblock_agent.storage.item_index import get_catalog_item
+from skyblock_agent.parsers.item_minetip import minetip_from_item_dict
+from skyblock_agent.storage.tooltips_index import load_tooltips, tooltips_are_available
 from skyblock_agent.storage.player_index import PlayerImportRecord
 from skyblock_agent.collectors.player_lookup import LookupResult
+from skyblock_agent.models.members import get_member
+from skyblock_agent.parsers.member_collections import parse_member_collections
+from skyblock_agent.parsers.member_dungeons import parse_member_dungeons
+from skyblock_agent.parsers.member_inventories import parse_member_inventories
 from skyblock_agent.validation.api_recognizer import RecognitionReport
 
 
@@ -40,14 +46,75 @@ def import_record_to_dict(record: PlayerImportRecord) -> dict[str, Any]:
     return record.to_dict()
 
 
+def _enrich_item_tooltip(item: dict[str, Any], tooltip_cache: dict[str, dict[str, Any]]) -> None:
+    if item.get("lore"):
+        tip = minetip_from_item_dict(item)
+        item["tooltip_title"] = tip["title"]
+        item["tooltip_text"] = tip["text"]
+        return
+
+    item_id = item.get("item_id")
+    if not item_id:
+        return
+    cached = tooltip_cache.get(str(item_id))
+    if not cached:
+        return
+    if cached.get("lore"):
+        item["lore"] = list(cached["lore"])
+    if cached.get("title"):
+        item["tooltip_title"] = cached["title"]
+    if cached.get("text"):
+        item["tooltip_text"] = cached["text"]
+
+
+def inventories_to_dict(summary) -> dict[str, Any]:
+    payload = summary.to_dict()
+    tooltip_cache = load_tooltips() if tooltips_are_available() else {}
+    icon_manifest = load_manifest()
+    for container in payload.get("containers", []):
+        for item in container.get("items", []):
+            item_id = item.get("item_id")
+            item["has_icon"] = bool(item_id and item_id in icon_manifest)
+            if tooltip_cache or item.get("lore"):
+                _enrich_item_tooltip(item, tooltip_cache)
+        for page in container.get("pages", []):
+            for item in page.get("items", []):
+                item_id = item.get("item_id")
+                item["has_icon"] = bool(item_id and item_id in icon_manifest)
+                if tooltip_cache or item.get("lore"):
+                    _enrich_item_tooltip(item, tooltip_cache)
+    return payload
+
+
+def collections_to_dict(summary) -> dict[str, Any]:
+    payload = summary.to_dict()
+    icon_manifest = load_manifest()
+    for entry in payload.get("entries", []):
+        item_id = entry.get("item_id")
+        entry["has_icon"] = bool(item_id and str(item_id) in icon_manifest)
+    for group in payload.get("groups", []):
+        for entry in group.get("entries", []):
+            item_id = entry.get("item_id")
+            entry["has_icon"] = bool(item_id and str(item_id) in icon_manifest)
+    return payload
+
+
 def build_api_payload(
     lookup: LookupResult,
     report: RecognitionReport,
 ) -> dict[str, Any]:
+    profile = lookup.profile.selected_profile
+    member = get_member(profile.get("members"), lookup.profile.uuid)
+    inventories = parse_member_inventories(member)
+    collections = parse_member_collections(member)
+    catacombs = parse_member_dungeons(member)
     return {
         "profile": profile_result_to_dict(lookup.profile),
         "import": import_record_to_dict(lookup.import_record),
         "recognition": report.to_dict(),
+        "inventories": inventories_to_dict(inventories),
+        "collections": collections_to_dict(collections),
+        "catacombs": catacombs.to_dict(),
     }
 
 
@@ -81,6 +148,7 @@ def auction_to_dict(auction) -> dict[str, Any]:
     return {
         "uuid": auction.uuid,
         "item_name": auction.item_name,
+        "item_id": auction.item_id,
         "tier": auction.tier,
         "category": auction.category,
         "bin": auction.bin,

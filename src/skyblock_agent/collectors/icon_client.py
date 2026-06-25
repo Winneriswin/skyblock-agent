@@ -46,6 +46,10 @@ class IconClient:
             }
         )
 
+    def fetch_vanilla_icon(self, material: str) -> IconFetchResult | None:
+        """Fetch Minecraft vanilla item/block texture for a SkyBlock ``material`` id."""
+        return self._fetch_vanilla(material)
+
     def fetch_icon(
         self,
         item_id: str,

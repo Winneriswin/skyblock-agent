@@ -1,4 +1,5 @@
 let activeView = "profile";
+let profileRendered = false;
 
 const pillClass = {
   ok: "pill-ok",
@@ -31,6 +32,7 @@ function formatNumber(value) {
   if (value === null || value === undefined) return "—";
   return Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
+window.formatNumber = formatNumber;
 
 function switchView(view) {
   activeView = view;
@@ -38,24 +40,37 @@ function switchView(view) {
     item.classList.toggle("active", item.dataset.view === view);
   });
 
-  const isProfile = view === "profile";
-  $("profile-topbar")?.classList.toggle("hidden", !isProfile);
-  $("market-topbar")?.classList.toggle("hidden", isProfile);
+  $("profile-topbar")?.classList.toggle("hidden", view !== "profile");
+  $("market-topbar")?.classList.toggle("hidden", view !== "market");
 
   const contentEl = $("content");
   const emptyEl = $("empty");
   const marketEmptyEl = $("market-empty");
   const marketContentEl = $("market-content");
+  const rngViewEl = $("rng-view");
 
-  if (isProfile) {
-    marketContentEl?.classList.add("hidden");
-    marketEmptyEl?.classList.add("hidden");
-    if (contentEl?.classList.contains("hidden")) {
+  contentEl?.classList.add("hidden");
+  emptyEl?.classList.add("hidden");
+  marketEmptyEl?.classList.add("hidden");
+  marketContentEl?.classList.add("hidden");
+  rngViewEl?.classList.add("hidden");
+  hideStatus();
+
+  if (view === "profile") {
+    if (profileRendered) {
+      contentEl?.classList.remove("hidden");
+    } else {
       emptyEl?.classList.remove("hidden");
     }
-  } else {
-    contentEl?.classList.add("hidden");
-    emptyEl?.classList.add("hidden");
+    return;
+  }
+
+  if (view === "rng") {
+    rngViewEl?.classList.remove("hidden");
+    return;
+  }
+
+  if (view === "market") {
     marketEmptyEl?.classList.remove("hidden");
     marketContentEl?.classList.add("hidden");
     if (typeof MarketBrowser === "undefined") {
@@ -155,6 +170,18 @@ function renderRecognition(report) {
   }
 }
 
+function renderCollections(collections) {
+  if (typeof ProfileCollections !== "undefined") {
+    ProfileCollections.render(collections);
+  }
+}
+
+function renderCatacombs(catacombs) {
+  if (typeof ProfileCatacombs !== "undefined") {
+    ProfileCatacombs.render(catacombs);
+  }
+}
+
 function renderProfile(payload) {
   const profile = payload.profile;
   const summary = profile.summary;
@@ -170,7 +197,14 @@ function renderProfile(payload) {
   renderSlayers(summary);
   if (payload.import) renderImport(payload.import);
   renderRecognition(report);
+  if (typeof ProfileInventory !== "undefined") {
+    if (payload.inventories) ProfileInventory.render(payload.inventories);
+    else ProfileInventory.clear();
+  }
+  renderCollections(payload.collections);
+  renderCatacombs(payload.catacombs);
 
+  profileRendered = true;
   $("empty")?.classList.add("hidden");
   $("content")?.classList.remove("hidden");
 }
@@ -190,6 +224,9 @@ function renderRecentPlayers(players) {
   const profileInput = $("profile-name");
 
   for (const player of players.slice(0, 12)) {
+    const row = document.createElement("div");
+    row.className = "recent-player-row";
+
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "recent-player";
@@ -199,7 +236,30 @@ function renderRecentPlayers(players) {
       if (profileInput) profileInput.value = player.selected_profile || "";
       form?.requestSubmit();
     });
-    recentPlayersEl.appendChild(btn);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "recent-player-delete";
+    deleteBtn.setAttribute("aria-label", `Remove ${player.username}`);
+    deleteBtn.title = "Remove import record";
+    deleteBtn.textContent = "×";
+    deleteBtn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!confirm(`Remove import record for ${player.username}?`)) return;
+      try {
+        const res = await fetch(`/api/players/${encodeURIComponent(player.username)}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("delete failed");
+        await loadRecentPlayers();
+      } catch {
+        showStatus("Failed to delete player record.", true);
+      }
+    });
+
+    row.appendChild(btn);
+    row.appendChild(deleteBtn);
+    recentPlayersEl.appendChild(row);
   }
 }
 
@@ -258,6 +318,44 @@ async function loadHealth() {
   }
 }
 
+function initTextureToggle() {
+  const toggle = $("texture-toggle");
+  if (!toggle || typeof ItemIcons === "undefined") return;
+
+  const buttons = toggle.querySelectorAll(".texture-btn");
+
+  function syncButtons() {
+    const mode = ItemIcons.getMode();
+    buttons.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.texture === mode);
+    });
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      ItemIcons.setMode(btn.dataset.texture);
+    });
+  });
+
+  ItemIcons.subscribe(() => {
+    syncButtons();
+    if (typeof ProfileInventory !== "undefined") {
+      ProfileInventory.refreshIcons();
+    }
+    if (typeof ProfileCollections !== "undefined") {
+      ProfileCollections.refreshIcons();
+    }
+    if (typeof MarketBrowser !== "undefined") {
+      MarketBrowser.refreshIcons();
+    }
+    if (typeof TooltipDebug !== "undefined") {
+      TooltipDebug.refreshIcons();
+    }
+  });
+
+  syncButtons();
+}
+
 function initApp() {
   const form = $("search-form");
   const searchBtn = $("search-btn");
@@ -308,7 +406,14 @@ function initApp() {
 
   loadHealth();
   loadRecentPlayers();
+  initTextureToggle();
+  if (typeof TooltipDebug !== "undefined") {
+    TooltipDebug.render();
+  }
   switchView("profile");
+  if (typeof ProfileInventory !== "undefined") {
+    ProfileInventory.clear();
+  }
 }
 
 if (document.readyState === "loading") {
